@@ -1,0 +1,33 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanBasicTrackSegment
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Basic track segment,
+            Icon = Build_FloorTileWood,
+        }
+
+        entity ES_WaymanDiagonalTrackSegment
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = 45-degree track segment,
+            Icon = Build_FloorTileWood,
+        }
+
+        entity ES_Wayman45DegreeLeftTurnSegment
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = 45-degree left turn segment,
+            Icon = Build_FloorTileWood,
+        }
+
+        entity ES_Wayman45DegreeRightTurnSegment
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = 45-degree right turn segment,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}

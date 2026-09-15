@@ -1,0 +1,6 @@
+name=Railroader: Wayman
+id=RailroaderWayman
+author=manoplin
+description=Buildable railway track pieces for Railroader.
+require=Railroader
+
