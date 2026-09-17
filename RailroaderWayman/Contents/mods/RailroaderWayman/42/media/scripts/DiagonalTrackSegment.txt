@@ -13,11 +13,11 @@ module RailroaderWayman
         {
             isThumpable = false,
 
-            face S
+            face N
             {
                 layer
                 {
-                    row = railroader_wayman_tracks_01_6 railroader_wayman_tracks_01_7 railroader_wayman_tracks_01_8 railroader_wayman_tracks_01_9 railroader_wayman_tracks_01_10 railroader_wayman_tracks_01_11,
+                    row = railroader_wayman_tracks_01_6 railroader_wayman_tracks_01_7 railroader_wayman_tracks_01_8 railroader_wayman_tracks_01_9 railroader_wayman_tracks_01_10,
                 }
             }
 
@@ -25,7 +25,7 @@ module RailroaderWayman
             {
                 layer
                 {
-                    row = railroader_wayman_tracks_01_12 railroader_wayman_tracks_01_13 railroader_wayman_tracks_01_14 railroader_wayman_tracks_01_15 railroader_wayman_tracks_01_16,
+                    row = railroader_wayman_tracks_01_11 railroader_wayman_tracks_01_12 railroader_wayman_tracks_01_13 railroader_wayman_tracks_01_14 railroader_wayman_tracks_01_15 railroader_wayman_tracks_01_16,
                 }
             }
 

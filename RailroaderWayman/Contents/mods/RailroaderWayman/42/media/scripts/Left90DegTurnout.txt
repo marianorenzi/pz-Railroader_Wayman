@@ -12,17 +12,18 @@ module RailroaderWayman
         component SpriteConfig
         {
             isThumpable = false,
+            OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
 
             face N
             {
                 layer
                 {
-                    row = railroader_wayman_switches_12_2 railroader_wayman_switches_12_3 railroader_wayman_switches_12_4 railroader_wayman_switches_12_5 false,
-                    row = false railroader_wayman_switches_12_6 railroader_wayman_switches_12_7 railroader_wayman_switches_12_8 false,
-                    row = false railroader_wayman_switches_12_9 railroader_wayman_switches_12_10 railroader_wayman_switches_12_11 railroader_wayman_switches_12_12,
-                    row = false railroader_wayman_switches_12_13 railroader_wayman_switches_12_14 railroader_wayman_switches_12_15 railroader_wayman_switches_12_16,
-                    row = false railroader_wayman_switches_12_17 railroader_wayman_switches_12_18 railroader_wayman_switches_12_19 railroader_wayman_switches_12_20,
-                    row = false railroader_wayman_switches_12_21 railroader_wayman_switches_12_22 railroader_wayman_switches_12_23 railroader_wayman_switches_12_24,
+                    row = railroader_wayman_switches_11_49 railroader_wayman_switches_11_50 railroader_wayman_switches_11_51 railroader_wayman_switches_11_52 false,
+                    row = false railroader_wayman_switches_11_53 railroader_wayman_switches_11_54 railroader_wayman_switches_11_55 false,
+                    row = false railroader_wayman_switches_11_56 railroader_wayman_switches_11_57 railroader_wayman_switches_11_58 railroader_wayman_switches_11_59,
+                    row = false railroader_wayman_switches_11_60 railroader_wayman_switches_11_61 railroader_wayman_switches_11_62 railroader_wayman_switches_11_63,
+                    row = false railroader_wayman_switches_12_0 railroader_wayman_switches_12_1 railroader_wayman_switches_12_2 railroader_wayman_switches_12_3,
+                    row = false railroader_wayman_switches_12_4 railroader_wayman_switches_12_5 railroader_wayman_switches_12_6 railroader_wayman_switches_12_7,
                 }
             }
 

@@ -6,7 +6,7 @@ module Base
         {
             LuaWindowClass = ISEntityWindow,
             DisplayName = Diagonal crossing segment,
-            Icon = Build_FloorTileWood,
+            Icon = DiagonalCrossingSegmentIcon,
         }
     }
 }

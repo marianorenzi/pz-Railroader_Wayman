@@ -1,0 +1,68 @@
+{
+  "entity": "Left45DegTurnoutDiag",
+  "iconFace": "N",
+  "faces": {
+    "N": {
+      "width": 8,
+      "height": 4,
+      "at": {"x": 4, "y": 2, "z": 0},
+      "switch": {"x": 5, "y": 0, "z": 0},
+      "divergingNodes": [
+        {"x": 1, "y": -1, "z": 0}
+      ],
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20", "industry_railroad_05_55", null, null],
+            [null, "industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20", "industry_railroad_03_3", "industry_railroad_03_3"],
+            [null, null, "industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20", null],
+            [null, null, null, "industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20"]
+          ]
+        },
+        {
+          "index": 1,
+          "tiles": [
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, "industry_railroad_04_25", "industry_railroad_03_3", null, null],
+            [null, null, null, "industry_railroad_04_24", "industry_railroad_04_26", null, null, null],
+            [null, null, null, "industry_railroad_04_28", "industry_railroad_04_27", "industry_railroad_03_3", "industry_railroad_03_3", "industry_railroad_03_3"]
+          ]
+        }
+      ]
+    },
+    "W": {
+      "width": 6,
+      "height": 6,
+      "at": {"x": 4, "y": 4, "z": 0},
+      "switch": {"x": 2, "y": 1, "z": 0},
+      "divergingNodes": [
+        {"x": 4, "y": -1, "z": 0}
+      ],
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            [null, null, null, "industry_railroad_03_2", "industry_railroad_03_28", "industry_railroad_01_12"],
+            [null, null, "industry_railroad_05_52", "industry_railroad_03_2", "industry_railroad_01_12", "industry_railroad_01_13"],
+            [null, null, null, "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10"],
+            [null, null, "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11"],
+            [null, "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8"],
+            ["industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9"]
+          ]
+        },
+        {
+          "index": 1,
+          "tiles": [
+            [null, null, null, null, null, "industry_railroad_03_2"],
+            [null, null, null, null, null, "industry_railroad_03_2"],
+            [null, null, null, "industry_railroad_03_2", null, "industry_railroad_03_2"],
+            [null, null, "industry_railroad_03_28", "industry_railroad_03_29", null, "industry_railroad_03_2"],
+            [null, null, "industry_railroad_03_13", "industry_railroad_03_10", "industry_railroad_03_28", "industry_railroad_03_30"],
+            [null, null, null, null, "industry_railroad_03_24", "industry_railroad_03_27"]
+          ]
+        }
+      ]
+    }
+  }
+}

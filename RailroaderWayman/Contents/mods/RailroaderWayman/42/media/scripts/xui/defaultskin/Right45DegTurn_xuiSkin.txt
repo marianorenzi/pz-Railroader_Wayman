@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanRight45DegTurn
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Right 45 deg turn,
+            Icon = Right45DegTurnIcon,
+        }
+    }
+}

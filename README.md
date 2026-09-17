@@ -12,7 +12,7 @@ graph.
 - `RailroaderWayman/Contents/mods/RailroaderWayman/common/`: shared mod
   metadata.
 - `RailroaderWayman/Contents/mods/RailroaderWayman/42/`: Build 42 mod files.
-- `tilesets/definitions/`: source matrices grouped into tracks, turns and
+- `definitions/`: source matrices grouped into tracks, turns and
   switches.
 
 ## Facing convention
@@ -31,30 +31,49 @@ axis and `W` represents the `E/W` axis.
 ## Track entities
 
 - `TrackSegment`: straight track, `S/W`.
-- `DiagonalTrackSegment`: diagonal track, `S/W`.
+- `TrackSegmentDiag`: diagonal track, `S/W`.
 - `CrossingSegment`: cardinal crossing edge, `S/W`.
-- `DiagonalCrossingSegment`: diagonal crossing segment, currently `N/E`.
-- `DiagonalCrossingEdge`: diagonal crossing edge, `N/S` only. Suitable vanilla
+- `CrossingSegmentDiag`: diagonal crossing segment, currently `N/E`.
+- `CrossingEdgeDiag`: diagonal crossing edge, `N/S` only. Suitable vanilla
   sprites for `E/W` are not currently available.
 
 ## Turn entities
 
-- `Degree45LeftTurnSegment`: `N/E/S/W`.
-- `Degree45RightTurnSegment`: `N/E/S/W`.
+- `Left45DegTurn`: `N/E/S/W`.
+- `Right45DegTurn`: `N/E/S/W`.
 
 ## Turnout entities
 
 - `SymmetricalThreeWayTurnout`: `N/S/W`.
-- `DiagonalRight45DegTurnout`: `N/S/W`.
+- `Right45DegTurnoutDiag`: `N/S/W`.
 - `WyeTurnout`: `S`.
 - `SymmetricalCompactThreeWayTurnout`: `E/W`.
 - `Right45DegTurnout`: `N/E/S/W`.
 - `Left45DegTurnout`: `N/E/S/W`.
 - `Left90DegTurnout`: `N`.
-- `DiagonalLeft45DegTurnout`: `N/W`.
+- `Left45DegTurnoutDiag`: `N/W`.
 
 Missing orientations remain intentionally absent until their vanilla tile
 compositions have been captured and verified.
+
+## Selected icon faces
+
+| Entity | Face |
+|---|---|
+| `CrossingSegment` | `S` |
+| `CrossingSegmentDiag` | `N` |
+| `TrackSegment` | `S` |
+| `TrackSegmentDiag` | `W` |
+| `Left45DegTurn` | `N` |
+| `Right45DegTurn` | `W` |
+| `Left45DegTurnout` | `N` |
+| `Left45DegTurnoutDiag` | `N` |
+| `Left90DegTurnout` | `N` |
+| `Right45DegTurnout` | `E` |
+| `Right45DegTurnoutDiag` | `N` |
+| `SymmetricalCompactThreeWayTurnout` | `W` |
+| `SymmetricalThreeWayTurnout` | `S` |
+| `WyeTurnout` | `S` |
 
 ## Current construction behavior
 

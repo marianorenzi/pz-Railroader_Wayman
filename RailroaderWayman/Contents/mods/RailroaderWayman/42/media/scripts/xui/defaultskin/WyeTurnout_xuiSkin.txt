@@ -6,7 +6,7 @@ module Base
         {
             LuaWindowClass = ISEntityWindow,
             DisplayName = Wye turnout,
-            Icon = Build_FloorTileWood,
+            Icon = WyeTurnoutIcon,
         }
     }
 }

@@ -1,0 +1,80 @@
+module RailroaderWayman
+{
+    entity Right45DegTurn
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanRight45DegTurn,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+            OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
+
+            face N
+            {
+                layer
+                {
+                    row = false false railroader_wayman_turns_01_63 railroader_wayman_turns_02_0 railroader_wayman_turns_02_1 railroader_wayman_turns_02_2,
+                    row = false railroader_wayman_turns_02_3 railroader_wayman_turns_02_4 railroader_wayman_turns_02_5 railroader_wayman_turns_02_6 railroader_wayman_turns_02_7,
+                    row = railroader_wayman_turns_02_8 railroader_wayman_turns_02_9 railroader_wayman_turns_02_10 railroader_wayman_turns_02_11 railroader_wayman_turns_02_12 railroader_wayman_turns_02_13,
+                    row = false false false false false false,
+                }
+            }
+
+            face S
+            {
+                layer
+                {
+                    row = railroader_wayman_turns_02_14 railroader_wayman_turns_02_15 railroader_wayman_turns_02_16 railroader_wayman_turns_02_17 railroader_wayman_turns_02_18 railroader_wayman_turns_02_19,
+                    row = railroader_wayman_turns_02_20 railroader_wayman_turns_02_21 railroader_wayman_turns_02_22 railroader_wayman_turns_02_23 railroader_wayman_turns_02_24 false,
+                    row = railroader_wayman_turns_02_25 railroader_wayman_turns_02_26 railroader_wayman_turns_02_27 railroader_wayman_turns_02_28 false false,
+                    row = railroader_wayman_turns_02_29 railroader_wayman_turns_02_30 railroader_wayman_turns_02_31 false false false,
+                }
+            }
+
+            face E
+            {
+                layer
+                {
+                    row = railroader_wayman_turns_02_32 railroader_wayman_turns_02_33 railroader_wayman_turns_02_34 railroader_wayman_turns_02_35 railroader_wayman_turns_02_36 false,
+                    row = false railroader_wayman_turns_02_37 railroader_wayman_turns_02_38 railroader_wayman_turns_02_39 railroader_wayman_turns_02_40 false,
+                    row = false false railroader_wayman_turns_02_41 railroader_wayman_turns_02_42 railroader_wayman_turns_02_43 false,
+                    row = false false false railroader_wayman_turns_02_44 railroader_wayman_turns_02_45 false,
+                }
+            }
+
+            face W
+            {
+                layer
+                {
+                    row = railroader_wayman_turns_02_46 railroader_wayman_turns_02_47 false false false false,
+                    row = railroader_wayman_turns_02_48 railroader_wayman_turns_02_49 railroader_wayman_turns_02_50 railroader_wayman_turns_02_51 false false,
+                    row = railroader_wayman_turns_02_52 railroader_wayman_turns_02_53 railroader_wayman_turns_02_54 railroader_wayman_turns_02_55 railroader_wayman_turns_02_56 false,
+                    row = false railroader_wayman_turns_02_57 railroader_wayman_turns_02_58 railroader_wayman_turns_02_59 railroader_wayman_turns_02_60 railroader_wayman_turns_02_61,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:2,
+            xpAward = Woodwork:10,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 3 [Base.LargePlank],
+                item 2 [Base.MetalBar],
+                item 6 [Base.RailroadSpike],
+            }
+        }
+    }
+}

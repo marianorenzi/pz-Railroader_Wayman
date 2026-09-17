@@ -6,7 +6,7 @@ module Base
         {
             LuaWindowClass = ISEntityWindow,
             DisplayName = Left 45 deg turnout,
-            Icon = Build_FloorTileWood,
+            Icon = Left45DegTurnoutIcon,
         }
     }
 }

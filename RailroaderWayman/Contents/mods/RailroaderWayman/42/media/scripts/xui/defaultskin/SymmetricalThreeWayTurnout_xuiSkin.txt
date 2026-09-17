@@ -6,7 +6,7 @@ module Base
         {
             LuaWindowClass = ISEntityWindow,
             DisplayName = Symmetrical three way turnout,
-            Icon = Build_FloorTileWood,
+            Icon = SymmetricalThreeWayTurnoutIcon,
         }
     }
 }

@@ -1,0 +1,31 @@
+{
+  "entity": "CrossingEdgeDiag",
+  "faces": {
+    "N": {
+      "width": 6,
+      "height": 2,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_04_32", "industry_railroad_03_23", null, "industry_railroad_01_15", "industry_railroad_01_20", null],
+            [null, "industry_railroad_04_32", "industry_railroad_01_23", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20"]
+          ]
+        }
+      ]
+    },
+    "S": {
+      "width": 6,
+      "height": 2,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_22", "industry_railroad_03_20", null],
+            [null, "industry_railroad_01_16", "industry_railroad_01_21", null, "industry_railroad_03_22", "industry_railroad_03_20"]
+          ]
+        }
+      ]
+    }
+  }
+}
