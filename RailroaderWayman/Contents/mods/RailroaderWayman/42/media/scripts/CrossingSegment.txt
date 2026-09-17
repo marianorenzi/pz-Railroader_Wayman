@@ -1,0 +1,53 @@
+module RailroaderWayman
+{
+    entity CrossingSegment
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanCrossingSegment,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+
+            face S
+            {
+                layer
+                {
+                    row = railroader_wayman_tracks_01_17 false railroader_wayman_tracks_01_18,
+                }
+            }
+
+            face W
+            {
+                layer
+                {
+                    row = railroader_wayman_tracks_01_19,
+                    row = false,
+                    row = railroader_wayman_tracks_01_20,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:2,
+            xpAward = Woodwork:10,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 3 [Base.LargePlank],
+                item 2 [Base.MetalBar],
+                item 6 [Base.RailroadSpike],
+            }
+        }
+    }
+}

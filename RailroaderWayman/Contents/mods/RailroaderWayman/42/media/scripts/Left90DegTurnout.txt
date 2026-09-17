@@ -1,0 +1,48 @@
+module RailroaderWayman
+{
+    entity Left90DegTurnout
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanLeft90DegTurnout,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+
+            face N
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_12_2 railroader_wayman_switches_12_3 railroader_wayman_switches_12_4 railroader_wayman_switches_12_5 false,
+                    row = false railroader_wayman_switches_12_6 railroader_wayman_switches_12_7 railroader_wayman_switches_12_8 false,
+                    row = false railroader_wayman_switches_12_9 railroader_wayman_switches_12_10 railroader_wayman_switches_12_11 railroader_wayman_switches_12_12,
+                    row = false railroader_wayman_switches_12_13 railroader_wayman_switches_12_14 railroader_wayman_switches_12_15 railroader_wayman_switches_12_16,
+                    row = false railroader_wayman_switches_12_17 railroader_wayman_switches_12_18 railroader_wayman_switches_12_19 railroader_wayman_switches_12_20,
+                    row = false railroader_wayman_switches_12_21 railroader_wayman_switches_12_22 railroader_wayman_switches_12_23 railroader_wayman_switches_12_24,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:2,
+            xpAward = Woodwork:10,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 3 [Base.LargePlank],
+                item 2 [Base.MetalBar],
+                item 6 [Base.RailroadSpike],
+            }
+        }
+    }
+}

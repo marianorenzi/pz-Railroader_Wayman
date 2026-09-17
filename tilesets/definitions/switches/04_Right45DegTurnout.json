@@ -1,0 +1,111 @@
+{
+  "entity": "Right45DegTurnout",
+  "faces": {
+    "N": {
+      "width": 8,
+      "height": 6,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            [null, null, null, null, "industry_railroad_05_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
+            [null, null, null, null, "industry_railroad_01_26", "industry_railroad_01_29", "industry_railroad_01_31", "industry_railroad_01_41"],
+            [null, null, null, "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_25", "industry_railroad_01_28", "industry_railroad_01_30"],
+            [null, null, "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_24", "industry_railroad_01_27"],
+            [null, "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9", "industry_railroad_01_6"],
+            ["industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9", null, "industry_railroad_01_6"]
+          ]
+        },
+        {
+          "index": 1,
+          "tiles": [
+            [null, null, null, null, null, null, null, null],
+            [null, null, null, null, null, "industry_railroad_01_6", null, "industry_railroad_01_6"],
+            [null, null, null, null, null, "industry_railroad_01_6", null, "industry_railroad_01_6"],
+            [null, null, null, null, null, "industry_railroad_01_6", null, "industry_railroad_01_6"],
+            [null, null, null, null, null, "industry_railroad_01_6", null, null],
+            [null, null, null, null, null, "industry_railroad_01_6", null, null]
+          ]
+        }
+      ]
+    },
+    "E": {
+      "width": 5,
+      "height": 4,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_03_21", null, "industry_railroad_04_20", "industry_railroad_04_23", "industry_railroad_05_55"],
+            ["industry_railroad_01_5", "industry_railroad_01_5", "industry_railroad_01_5", "industry_railroad_01_5", "industry_railroad_01_5"],
+            ["industry_railroad_01_4", "industry_railroad_01_4", "industry_railroad_01_4", "industry_railroad_01_4", "industry_railroad_01_4"],
+            ["industry_railroad_01_3", "industry_railroad_01_3", "industry_railroad_01_3", "industry_railroad_01_3", "industry_railroad_01_3"]
+          ]
+        },
+        {
+          "index": 1,
+          "tiles": [
+            [null, null, null, null, null],
+            ["industry_railroad_04_16", "industry_railroad_04_19", null, "industry_railroad_04_25", "industry_railroad_05_54"],
+            [null, "industry_railroad_04_21", "industry_railroad_04_24", null, null],
+            [null, null, null, "industry_railroad_04_27", null]
+          ]
+        }
+      ]
+    },
+    "S": {
+      "width": 9,
+      "height": 6,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            [null, "industry_railroad_03_0", null, "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9"],
+            [null, "industry_railroad_03_0", "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9", null],
+            [null, "industry_railroad_01_54", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9", null, null],
+            [null, "industry_railroad_01_53", "industry_railroad_01_55", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9", null, null, null],
+            [null, "industry_railroad_01_49", "industry_railroad_01_52", "industry_railroad_01_46", "industry_railroad_01_9", null, null, null, null],
+            ["industry_railroad_05_52", "industry_railroad_01_48", "industry_railroad_01_50", "industry_railroad_01_51", null, null, null, null, null]
+          ]
+        },
+        {
+          "index": 1,
+          "tiles": [
+            [null, null, null, "industry_railroad_03_0", null, null, null, null, null],
+            [null, null, null, "industry_railroad_03_0", null, null, null, null, null],
+            [null, "industry_railroad_03_0", null, "industry_railroad_03_0", null, null, null, null, null],
+            [null, "industry_railroad_03_0", null, "industry_railroad_03_0", null, null, null, null, null],
+            [null, "industry_railroad_03_0", null, "industry_railroad_03_0", null, null, null, null, null],
+            [null, "industry_railroad_03_0", null, "industry_railroad_03_0", null, null, null, null, null]
+          ]
+        }
+      ]
+    },
+    "W": {
+      "width": 9,
+      "height": 5,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_05_55", null, null, null, null, null, null, null, null],
+            ["industry_railroad_01_5", "industry_railroad_01_5", "industry_railroad_01_5", "industry_railroad_02_47", "industry_railroad_02_46", "industry_railroad_03_5", "industry_railroad_03_5", "industry_railroad_03_5", "industry_railroad_01_5"],
+            ["industry_railroad_01_4", "industry_railroad_01_4", "industry_railroad_01_4", "industry_railroad_02_45", "industry_railroad_02_54", "industry_railroad_02_52", "industry_railroad_02_50", null, "industry_railroad_01_4"],
+            ["industry_railroad_01_3", "industry_railroad_01_3", "industry_railroad_01_3", "industry_railroad_02_53", "industry_railroad_02_51", "industry_railroad_02_49", "industry_railroad_01_19", "industry_railroad_01_20", "industry_railroad_01_3"],
+            [null, null, null, null, "industry_railroad_02_48", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20"]
+          ]
+        },
+        {
+          "index": 1,
+          "tiles": [
+            [null, null, null, null, null, null, null, null, null],
+            ["industry_railroad_05_54", null, null, "industry_railroad_03_5", "industry_railroad_03_5", null, null, null, null],
+            [null, null, null, null, null, null, null, null, null],
+            [null, null, null, "industry_railroad_03_3", "industry_railroad_03_3", "industry_railroad_03_3", "industry_railroad_03_3", "industry_railroad_03_3", null],
+            [null, null, null, null, null, null, null, null, null]
+          ]
+        }
+      ]
+    }
+  }
+}

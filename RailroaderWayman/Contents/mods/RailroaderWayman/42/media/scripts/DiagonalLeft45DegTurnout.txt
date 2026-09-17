@@ -1,0 +1,59 @@
+module RailroaderWayman
+{
+    entity DiagonalLeft45DegTurnout
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanDiagonalLeft45DegTurnout,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+
+            face N
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_12_25 railroader_wayman_switches_12_26 railroader_wayman_switches_12_27 railroader_wayman_switches_12_28 railroader_wayman_switches_12_29 railroader_wayman_switches_12_30 false false,
+                    row = false railroader_wayman_switches_12_31 railroader_wayman_switches_12_32 railroader_wayman_switches_12_33 railroader_wayman_switches_12_34 railroader_wayman_switches_12_35 railroader_wayman_switches_12_36 railroader_wayman_switches_12_37,
+                    row = false false railroader_wayman_switches_12_38 railroader_wayman_switches_12_39 railroader_wayman_switches_12_40 railroader_wayman_switches_12_41 railroader_wayman_switches_12_42 false,
+                    row = false false false railroader_wayman_switches_12_43 railroader_wayman_switches_12_44 railroader_wayman_switches_12_45 railroader_wayman_switches_12_46 railroader_wayman_switches_12_47,
+                }
+            }
+
+            face W
+            {
+                layer
+                {
+                    row = false false false railroader_wayman_switches_12_48 railroader_wayman_switches_12_49 railroader_wayman_switches_12_50,
+                    row = false false railroader_wayman_switches_12_51 railroader_wayman_switches_12_52 railroader_wayman_switches_12_53 railroader_wayman_switches_12_54,
+                    row = false false false railroader_wayman_switches_12_55 railroader_wayman_switches_12_56 railroader_wayman_switches_12_57,
+                    row = false false railroader_wayman_switches_12_58 railroader_wayman_switches_12_59 railroader_wayman_switches_12_60 railroader_wayman_switches_12_61,
+                    row = false railroader_wayman_switches_12_62 railroader_wayman_switches_12_63 railroader_wayman_switches_13_0 railroader_wayman_switches_13_1 railroader_wayman_switches_13_2,
+                    row = railroader_wayman_switches_13_3 railroader_wayman_switches_13_4 railroader_wayman_switches_13_5 railroader_wayman_switches_13_6 railroader_wayman_switches_13_7 railroader_wayman_switches_13_8,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:2,
+            xpAward = Woodwork:10,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 3 [Base.LargePlank],
+                item 2 [Base.MetalBar],
+                item 6 [Base.RailroadSpike],
+            }
+        }
+    }
+}

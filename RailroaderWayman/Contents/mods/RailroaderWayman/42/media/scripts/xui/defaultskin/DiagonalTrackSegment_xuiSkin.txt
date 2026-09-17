@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanDiagonalTrackSegment
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Diagonal track segment,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}

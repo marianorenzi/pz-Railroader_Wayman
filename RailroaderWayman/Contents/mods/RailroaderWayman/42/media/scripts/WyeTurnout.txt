@@ -1,0 +1,47 @@
+module RailroaderWayman
+{
+    entity WyeTurnout
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanWyeTurnout,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+
+            face S
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_06_45 railroader_wayman_switches_06_46 railroader_wayman_switches_06_47 railroader_wayman_switches_06_48 railroader_wayman_switches_06_49 railroader_wayman_switches_06_50 railroader_wayman_switches_06_51 railroader_wayman_switches_06_52 railroader_wayman_switches_06_53 railroader_wayman_switches_06_54 railroader_wayman_switches_06_55,
+                    row = false railroader_wayman_switches_06_56 railroader_wayman_switches_06_57 false railroader_wayman_switches_06_58 railroader_wayman_switches_06_59 railroader_wayman_switches_06_60 railroader_wayman_switches_06_61 railroader_wayman_switches_06_62 railroader_wayman_switches_06_63 false,
+                    row = false false railroader_wayman_switches_07_0 railroader_wayman_switches_07_1 railroader_wayman_switches_07_2 railroader_wayman_switches_07_3 railroader_wayman_switches_07_4 railroader_wayman_switches_07_5 railroader_wayman_switches_07_6 false false,
+                    row = false false false railroader_wayman_switches_07_7 railroader_wayman_switches_07_8 railroader_wayman_switches_07_9 railroader_wayman_switches_07_10 railroader_wayman_switches_07_11 false false false,
+                    row = false false false railroader_wayman_switches_07_12 railroader_wayman_switches_07_13 railroader_wayman_switches_07_14 railroader_wayman_switches_07_15 false false false false,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:2,
+            xpAward = Woodwork:10,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 3 [Base.LargePlank],
+                item 2 [Base.MetalBar],
+                item 6 [Base.RailroadSpike],
+            }
+        }
+    }
+}

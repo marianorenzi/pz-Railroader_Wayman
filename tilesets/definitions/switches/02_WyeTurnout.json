@@ -1,0 +1,31 @@
+{
+  "entity": "WyeTurnout",
+  "faces": {
+    "S": {
+      "width": 11,
+      "height": 5,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_22", "industry_railroad_04_2", "industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9"],
+            [null, "industry_railroad_01_16", "industry_railroad_01_21", null, "industry_railroad_01_54", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9", null],
+            [null, null, "industry_railroad_04_0", "industry_railroad_04_3", "industry_railroad_01_53", "industry_railroad_01_55", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9", null, null],
+            [null, null, null, "industry_railroad_04_5", "industry_railroad_01_49", "industry_railroad_01_52", "industry_railroad_01_46", "industry_railroad_01_9", null, null, null],
+            [null, null, null, "industry_railroad_05_52", "industry_railroad_01_48", "industry_railroad_01_50", "industry_railroad_01_51", null, null, null, null]
+          ]
+        },
+        {
+          "index": 1,
+          "tiles": [
+            [null, null, null, null, null, null, null, null, null, null, null],
+            [null, null, null, null, "industry_railroad_04_4", "industry_railroad_04_7", null, null, null, null, null],
+            [null, null, null, null, null, "industry_railroad_04_9", null, null, null, null, null],
+            [null, null, null, null, "industry_railroad_04_8", "industry_railroad_04_10", "industry_railroad_04_12", null, null, null, null],
+            [null, null, null, null, null, null, null, null, null, null, null]
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanCrossingSegment
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Crossing segment,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}

@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanLeft90DegTurnout
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Left 90 deg turnout,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}

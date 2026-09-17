@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanDiagonalLeft45DegTurnout
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Diagonal left 45 deg turnout,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}

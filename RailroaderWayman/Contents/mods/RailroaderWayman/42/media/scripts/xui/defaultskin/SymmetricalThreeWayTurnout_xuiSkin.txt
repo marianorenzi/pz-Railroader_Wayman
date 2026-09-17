@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanSymmetricalThreeWayTurnout
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Symmetrical three way turnout,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}

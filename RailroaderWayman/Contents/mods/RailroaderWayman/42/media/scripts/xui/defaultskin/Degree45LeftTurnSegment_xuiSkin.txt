@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanDegree45LeftTurnSegment
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = 45-degree left turn segment,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}
