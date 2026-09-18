@@ -4,11 +4,13 @@
 require "Wayman/WaymanGraphData"
 require "Wayman/WaymanGraphEditor"
 require "Wayman/WaymanGraphDisplay"
+require "Wayman/WaymanRRGraph"
 require "ISUI/Maps/ISWorldMap"
 
 local GraphData = RailroaderWaymanGraphData
 local Editor = RailroaderWaymanGraphEditor
 local GraphDisplay = RailroaderWaymanGraphDisplay
+local RRGraph = RailroaderWaymanRRGraph
 local WORLD_DATA_KEY = "RailroaderWayman_World"
 local POINT_SIZE = 5
 local POINT_BORDER = 1
@@ -20,6 +22,17 @@ local function log(message)
     print("[RailroaderWayman] WorldMapGraph: " .. message)
 end
 
+--- Rebuilds RR's runtime-only route and graph registries from persistent world data.
+local function registerRRGraph(data)
+    if type(data.edges) ~= "table" or type(data.edges.wayman) ~= "table" then return end
+    local registered, reason = RRGraph.register(data)
+    if not registered then
+        log("RR route/graph registration failed: " .. tostring(reason))
+        return
+    end
+    log("registered RR route/graph at revision " .. tostring(data.revision))
+end
+
 --- Installs freshly received authoritative graph data in the client cache.
 local function storeWorldData(data)
     if type(data) ~= "table" then return false end
@@ -29,13 +42,17 @@ local function storeWorldData(data)
     ModData.add(WORLD_DATA_KEY, data)
     Editor.onWorldData(data)
     GraphDisplay.refresh(data)
+    registerRRGraph(data)
     return true
 end
 
 --- Loads cached graph data and requests the authoritative multiplayer copy once.
 local function requestWorldData()
     local localData = ModData.get(WORLD_DATA_KEY)
-    if type(localData) == "table" then worldData = GraphData.ensure(localData) end
+    if type(localData) == "table" then
+        worldData = GraphData.ensure(localData)
+        registerRRGraph(worldData)
+    end
     if isClient() and not requestPending then
         requestPending = true
         ModData.request(WORLD_DATA_KEY)

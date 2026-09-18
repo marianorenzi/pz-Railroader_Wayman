@@ -5,6 +5,7 @@
 require "Wayman/WaymanEntityGeometry"
 require "Wayman/WaymanEntityDescriptor"
 require "Wayman/WaymanGraphData"
+require "Wayman/WaymanRRGraph"
 
 RailroaderWaymanEntityRuntime = RailroaderWaymanEntityRuntime or {}
 
@@ -13,6 +14,7 @@ local OBJECT_DATA_KEY = "railroaderWayman"
 local pending = {}
 local GraphData = RailroaderWaymanGraphData
 local EntityDescriptor = RailroaderWaymanEntityDescriptor
+local RRGraph = RailroaderWaymanRRGraph
 
 --- Writes a namespaced runtime diagnostic to the Project Zomboid log.
 local function log(message)
@@ -115,6 +117,18 @@ end
 --- Broadcasts authoritative Wayman world data when running as a server.
 local function transmitWorldData()
     if isServer() and ModData.transmit then ModData.transmit(WORLD_DATA_KEY) end
+end
+
+--- Rebuilds RR's runtime-only route and graph registries from saved Wayman data.
+local function registerPersistedRRGraph()
+    local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
+    if type(worldData.edges) ~= "table" or type(worldData.edges.wayman) ~= "table" then return end
+    local registered, reason = RRGraph.register(worldData)
+    if not registered then
+        log("saved RR route/graph registration failed: " .. tostring(reason))
+        return
+    end
+    log("registered saved RR route/graph at revision " .. tostring(worldData.revision))
 end
 
 --- Removes all graph records owned by an entity, optionally preserving update state.
@@ -455,12 +469,22 @@ function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision)
         log("graph update rejected: " .. tostring(reason))
         return false, reason
     end
+    local rrDefinition, rrReason = RRGraph.export(normalized)
+    if not rrDefinition then
+        log("graph update rejected by RR export: " .. tostring(rrReason))
+        return false, rrReason
+    end
     worldData.availableNodes = normalized.availableNodes
     worldData.edges = normalized.edges
     worldData.switches = normalized.switches
     worldData.nextEdgeId = normalized.nextEdgeId
     worldData.revision = normalized.revision
     transmitWorldData()
+    local registered, registerReason = RRGraph.register(worldData)
+    if not registered then
+        log("RR graph registration failed at revision " .. tostring(worldData.revision)
+            .. ": " .. tostring(registerReason))
+    end
     log("graph update accepted at revision " .. tostring(worldData.revision))
     return true
 end
@@ -560,6 +584,7 @@ function RailroaderWaymanEntityRuntime.OnCreate(params)
 end
 
 Events.OnTick.Add(initializePending)
+Events.OnInitGlobalModData.Add(registerPersistedRRGraph)
 Events.OnObjectAboutToBeRemoved.Add(RailroaderWaymanEntityRuntime.OnRemove)
 Events.OnClientCommand.Add(onClientCommand)
 

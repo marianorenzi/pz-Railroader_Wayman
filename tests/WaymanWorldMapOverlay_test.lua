@@ -58,6 +58,14 @@ RailroaderWaymanGraphDisplay = {
     refresh = function() end,
 }
 
+local rrRegistrations = {}
+RailroaderWaymanRRGraph = {
+    register = function(data)
+        table.insert(rrRegistrations, data)
+        return true
+    end,
+}
+
 function require(name)
     if name == "Wayman/WaymanGraphData" then return dofile(sharedRoot .. name .. ".lua") end
 end
@@ -97,6 +105,13 @@ local data = {
 }
 handlers.OnReceiveGlobalModData[1]("RailroaderWayman_World", data)
 assertEqual(registry.RailroaderWayman_World, data, "received data registration")
+assertEqual(#rrRegistrations, 0, "data without wayman edge must not register RR")
+
+data.edges.wayman = data.edges.edge_1
+handlers.OnReceiveGlobalModData[1]("RailroaderWayman_World", data)
+assertEqual(#rrRegistrations, 1, "persisted wayman graph registration")
+assertEqual(rrRegistrations[1], data, "registered authoritative graph snapshot")
+data.edges.wayman = nil
 
 local mouseX, mouseY = 1000, 1000
 local map = setmetatable({

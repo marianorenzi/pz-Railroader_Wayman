@@ -25,6 +25,7 @@ Events = {
     OnTick = {
         Add = function(handler) table.insert(tickHandlers, handler) end,
     },
+    OnInitGlobalModData = { Add = function(handler) Events.initGlobalModDataHandler = handler end },
     OnObjectAboutToBeRemoved = { Add = function(handler) Events.removeHandler = handler end },
     OnClientCommand = { Add = function(handler) Events.commandHandler = handler end },
 }
@@ -158,6 +159,16 @@ assertTrue(result.entities == nil, "global modData must not contain entities")
 assertEqual(#result.availableNodes, expectedBlocks, "available node block count")
 assertEqual(#result.switches, expectedSwitches, "switch count")
 assertEqual(worldTransmissions, #created - 5, "global modData transmission count")
+
+local registeredOnLoad
+RailroaderWaymanRRGraph.register = function(data)
+    registeredOnLoad = data
+    return true
+end
+result.edges.wayman = { result.availableNodes[1], result.availableNodes[2] }
+Events.initGlobalModDataHandler()
+assertTrue(registeredOnLoad == result, "saved graph was not registered during world-data load")
+result.edges.wayman = nil
 
 local function findBlock(owner, id)
     for _, block in ipairs(result.availableNodes) do
