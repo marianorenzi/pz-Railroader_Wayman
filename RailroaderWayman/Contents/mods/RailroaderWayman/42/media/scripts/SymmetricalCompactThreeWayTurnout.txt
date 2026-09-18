@@ -12,6 +12,7 @@ module RailroaderWayman
         component SpriteConfig
         {
             isThumpable = false,
+            OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
 
             face W
             {
