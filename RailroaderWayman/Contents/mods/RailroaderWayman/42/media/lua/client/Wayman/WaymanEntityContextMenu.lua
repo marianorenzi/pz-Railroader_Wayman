@@ -118,7 +118,9 @@ local function updateRailEntity(_worldobjects, playerNum, instance)
         z = square:getZ(),
         objectIndex = master:getObjectIndex(),
         facing = instance.facing,
-        modData = copy(master:getModData()[OBJECT_DATA_KEY] or {}),
+        modData = {
+            id = (master:getModData()[OBJECT_DATA_KEY] or {}).id,
+        },
     }
     local player = getSpecificPlayer(playerNum)
     if isClient() then

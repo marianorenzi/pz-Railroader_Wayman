@@ -182,10 +182,16 @@ local function findSwitch(owner)
     end
 end
 
-local function assertNode(actual, origin, relative, message)
-    assertEqual(actual.x, origin.x + relative.x, message .. " x")
-    assertEqual(actual.y, origin.y + relative.y, message .. " y")
-    assertEqual(actual.z, origin.z + (relative.z or 0), message .. " z")
+local function assertRelativeNode(actual, relative, message)
+    assertEqual(actual.x, relative.x, message .. " x")
+    assertEqual(actual.y, relative.y, message .. " y")
+    assertEqual(actual.z, relative.z or 0, message .. " z")
+end
+
+local function assertOrigin(actual, expected, message)
+    assertEqual(actual.x, expected.x, message .. " x")
+    assertEqual(actual.y, expected.y, message .. " y")
+    assertEqual(actual.z, expected.z, message .. " z")
 end
 
 for _, entry in ipairs(created) do
@@ -199,9 +205,10 @@ for _, entry in ipairs(created) do
         if entry.geometry.kind == "turn" then
             local block = findBlock(owner, "nodes")
             assertTrue(block, "turn nodes block is missing")
+            assertOrigin(block.origin, entry.origin, owner .. ":nodes origin")
             assertEqual(#block.nodes, #entry.geometry.nodes, "turn node count")
             for index, node in ipairs(entry.geometry.nodes) do
-                assertNode(block.nodes[index], entry.origin, node, owner .. ":nodes")
+                assertRelativeNode(block.nodes[index], node, owner .. ":nodes")
             end
         else
             local at = findBlock(owner, "at")
@@ -222,14 +229,16 @@ for _, entry in ipairs(created) do
                 "through node count")
             assertEqual(#diverge.nodes, #expectedDiverge,
                 "diverge node count")
-            assertNode(at.nodes[1], entry.origin, entry.geometry.at, owner .. ":at")
+            assertOrigin(at.origin, entry.origin, owner .. ":at origin")
+            assertRelativeNode(at.nodes[1], entry.geometry.at, owner .. ":at")
             for index, node in ipairs(expectedThrough) do
-                assertNode(through.nodes[index], entry.origin, node, owner .. ":through")
+                assertRelativeNode(through.nodes[index], node, owner .. ":through")
             end
             for index, node in ipairs(expectedDiverge) do
-                assertNode(diverge.nodes[index], entry.origin, node, owner .. ":diverge")
+                assertRelativeNode(diverge.nodes[index], node, owner .. ":diverge")
             end
-            assertNode(switch.at, entry.origin, entry.geometry.at, owner .. " switch at")
+            assertOrigin(switch.origin, entry.origin, owner .. " switch origin")
+            assertRelativeNode(switch.at, entry.geometry.at, owner .. " switch at")
             assertTrue(switch.switch == nil, "visual switch position leaked to global modData")
         end
     end
@@ -287,7 +296,7 @@ assertEqual(recoveredOwner, removedOwner, "existing owner changed during recover
 assertEqual(result.revision, revisionBeforeRecovery + 1, "recovery revision")
 assertEqual(#result.edges.edge_for_removal_test, 1, "recovery lost edge placement")
 assertTrue(result.edges.edge_for_removal_test[1].invertNodes, "recovery lost inversion")
-assertNode(result.edges.edge_for_removal_test[1].nodes[1], replay.origin,
+assertRelativeNode(result.edges.edge_for_removal_test[1].nodes[1],
     replay.geometry.nodes[1], "server-default fallback")
 
 -- A forged client ID cannot move or overwrite another physical entity's owner.
@@ -308,7 +317,7 @@ local infiniteOk = RailroaderWaymanEntityRuntime.SaveGeometry(replay.object, {
     nodes = { { x = math.huge, y = 0 / 0 } },
 }, "N")
 assertTrue(infiniteOk, "non-finite fallback update failed")
-assertNode(result.edges.edge_for_removal_test[1].nodes[1], replay.origin,
+assertRelativeNode(result.edges.edge_for_removal_test[1].nodes[1],
     replay.geometry.nodes[1], "non-finite server-default fallback")
 
 -- A failed staged rebuild leaves the authoritative graph untouched.

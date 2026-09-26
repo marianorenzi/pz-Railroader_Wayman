@@ -2,10 +2,12 @@
 -- editor's map/highlight options and translates graph snapshots into world
 -- highlight groups without depending on an editor or map instance.
 require "Wayman/WaymanWorldHighlights"
+require "Wayman/WaymanGraphData"
 
 RailroaderWaymanGraphDisplay = RailroaderWaymanGraphDisplay or {}
 local Display = RailroaderWaymanGraphDisplay
 local WorldHighlights = RailroaderWaymanWorldHighlights
+local GraphData = RailroaderWaymanGraphData
 local INSPECTION_GROUP = "graph-inspection"
 
 Display.options = Display.options or {
@@ -39,16 +41,16 @@ local function refreshWorldHighlights(data)
     end
     for _, block in ipairs(data.availableNodes or {}) do
         local color = blockColors[block.id] or WorldHighlights.colors.nodes
-        for _, node in ipairs(block.nodes or {}) do addNode(node, color) end
+        for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do addNode(node, color) end
     end
     for _, blocks in pairs(data.edges or {}) do
         for _, block in ipairs(blocks or {}) do
             local color = blockColors[block.id] or WorldHighlights.colors.nodes
-            for _, node in ipairs(block.nodes or {}) do addNode(node, color) end
+            for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do addNode(node, color) end
         end
     end
     for _, switch in ipairs(data.switches or {}) do
-        addNode(switch.at, WorldHighlights.colors.at)
+        addNode(GraphData.getAbsoluteNode(switch.origin, switch.at), WorldHighlights.colors.at)
     end
     WorldHighlights.replaceGroup(INSPECTION_GROUP, entries)
 end

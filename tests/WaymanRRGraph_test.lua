@@ -23,19 +23,23 @@ end
 local world = {
     availableNodes = {
         { blockId = "turnout_1:through", owner = "turnout_1", id = "through",
-            nodes = { { x = 12, y = 22 } } },
+            origin = { x = 10, y = 20, z = 0 },
+            nodes = { { x = 2, y = 2 } } },
     },
     edges = {
         wayman = {
-            { blockId = "turn_1:nodes", invertNodes = true, nodes = {
-                { x = 1, y = 1 }, { x = 2, y = 2 },
+            { blockId = "turn_1:nodes", invertNodes = true,
+                origin = { x = 10, y = 20, z = 0 }, nodes = {
+                { x = -9, y = -19 }, { x = -8, y = -18 },
             } },
             { blockId = "turnout_1:at", owner = "turnout_1", id = "at",
-                nodes = { { x = 12, y = 22 } } },
+                origin = { x = 10, y = 20, z = 0 },
+                nodes = { { x = 2, y = 2 } } },
         },
         diverge = {
             { blockId = "turnout_1:diverge", owner = "turnout_1", id = "diverge",
-                nodes = { { x = 16, y = 26 } } },
+                origin = { x = 10, y = 20, z = 0 },
+                nodes = { { x = 6, y = 6 } } },
             { blockId = "turn_2:nodes", nodes = { { x = 20, y = 30 } } },
         },
     },
@@ -43,7 +47,8 @@ local world = {
         {
             id = "turnout_1",
             owner = "turnout_1",
-            at = { x = 12, y = 22 },
+            origin = { x = 10, y = 20, z = 0 },
+            at = { x = 2, y = 2 },
             legs = {
                 throat = { edge = "wayman", toward = "start" },
                 through = { edge = "wayman", toward = "end" },
@@ -88,7 +93,7 @@ end
 local registered, registerReason = RRGraph.register(world)
 assert(registered, registerReason)
 assertEqual(registeredRouteId, "wayman", "RR route id")
-assertEqual(registeredRoute.looped, false, "RR route is not looped")
+assertEqual(registeredRoute.looped, true, "RR route is looped")
 assertEqual(registeredRoute.nodes, registeredDefinition.edges.wayman,
     "RR route uses the exported wayman edge")
 assertEqual(registeredId, "wayman", "RR network id")

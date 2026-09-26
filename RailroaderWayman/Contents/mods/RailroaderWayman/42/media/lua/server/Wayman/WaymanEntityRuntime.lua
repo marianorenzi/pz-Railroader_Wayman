@@ -1,6 +1,6 @@
 -- Authoritative server runtime for Wayman rail entities. It resolves physical
 -- multi-square entities, normalizes their relative geometry against trusted
--- defaults, maintains their absolute node blocks/switches in global ModData,
+-- defaults, maintains relative node blocks/switches with their world origins in global ModData,
 -- applies graph-editor transactions, and synchronizes accepted changes.
 require "Wayman/WaymanEntityGeometry"
 require "Wayman/WaymanEntityDescriptor"
@@ -27,29 +27,18 @@ local function nextId(kind, worldData)
     local counterKey = kind == "turnout" and "nextTurnoutId" or "nextTurnId"
     local value = worldData[counterKey] or 1
     worldData[counterKey] = value + 1
-    return (kind == "turnout" and "turnout_" or "turn_") .. tostring(value)
+    return tostring(kind) .. "_" .. tostring(value)
 end
 
---- Converts one entity-relative node into absolute world coordinates.
-local function absoluteNode(origin, node)
-    return {
-        x = origin.x + node.x,
-        y = origin.y + node.y,
-        z = origin.z + (node.z or 0),
-    }
-end
 
 --- Builds an indivisible global node block from relative entity geometry.
 local function makeNodeBlock(owner, id, origin, relativeNodes)
-    local nodes = {}
-    for _, node in ipairs(relativeNodes) do
-        table.insert(nodes, absoluteNode(origin, node))
-    end
     return {
         blockId = owner .. ":" .. id,
         owner = owner,
         id = id,
-        nodes = nodes,
+        origin = GraphData.copy(origin),
+        nodes = GraphData.copy(relativeNodes),
     }
 end
 
@@ -81,7 +70,8 @@ local function buildTurnoutRegistration(owner, geometry, origin)
         switch = {
             id = owner,
             owner = owner,
-            at = absoluteNode(origin, geometry.at),
+            origin = GraphData.copy(origin),
+            at = GraphData.copy(geometry.at),
             legs = {
                 throat = {},
                 through = {},
@@ -301,17 +291,27 @@ local function effectiveGeometry(defaults, supplied)
 end
 
 --- Reports whether an owner is represented anywhere in the global graph state.
+---@param worldData table
+---@param owner string?
+---@return boolean
 local function ownerExists(worldData, owner)
     if not owner then return false end
     for _, block in ipairs(worldData.availableNodes) do if block.owner == owner then return true end end
+    for _, switch in ipairs(worldData.switches) do if switch.owner == owner then return true end end
     for _, blocks in pairs(worldData.edges) do
         for _, block in ipairs(blocks) do if block.owner == owner then return true end end
     end
-    for _, switch in ipairs(worldData.switches) do if switch.owner == owner then return true end end
     return false
 end
 
+---@class WaymanBlockPlacement
+---@field blocks table
+---@field legs table?
+
 --- Captures edge positions, inversions, and switch legs before geometry replacement.
+---@param worldData WaymanGraphData
+---@param owner string entity unique ID
+---@return WaymanBlockPlacement
 local function capturePlacement(worldData, owner)
     local result = { blocks = {}, legs = nil }
     for _, block in ipairs(worldData.availableNodes) do
@@ -335,6 +335,9 @@ local function capturePlacement(worldData, owner)
 end
 
 --- Restores graph membership and switch configuration after rebuilding geometry.
+---@param worldData WaymanGraphData
+---@param owner string entity unique ID
+---@param placement WaymanBlockPlacement
 local function restorePlacement(worldData, owner, placement)
     for index = #worldData.availableNodes, 1, -1 do
         local block = worldData.availableNodes[index]
@@ -354,8 +357,14 @@ local function restorePlacement(worldData, owner, placement)
 end
 
 --- Recovers or updates an entity using server defaults and authoritative registration.
+---@param object IsoObject
+---@param submittedData table?
+---@param requestedFacing string?
+---@return boolean, string?
 function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, requestedFacing)
+    -- validate authority
     if isClient() then return false, "server authority required" end
+
     -- Resolve the physical object and its trusted geometry definition.
     local entity, reason = EntityDescriptor.describe(object, requestedFacing)
     if not entity then
@@ -364,13 +373,12 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
     end
 
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
-    local objectData = entity.master:getModData()
-    local serverData = objectData[OBJECT_DATA_KEY]
+    local masterModData = entity.master:getModData()
     submittedData = type(submittedData) == "table" and submittedData or {}
 
     -- Identity is server-owned. Client modData may supply geometry overrides,
     -- but it cannot select another entity's owner ID.
-    local serverId = serverData and serverData.id
+    local serverId = masterModData[OBJECT_DATA_KEY] and masterModData[OBJECT_DATA_KEY].id
     local owner = ownerExists(worldData, serverId) and serverId or nil
 
     -- Stage removal, rebuilding, and placement restoration on an isolated copy.
@@ -385,7 +393,7 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
         placement = { blocks = {} }
     end
 
-    -- Normalize untrusted fields, build canonical absolute records, and restore
+    -- Normalize untrusted fields, build canonical relative records, and restore
     -- the entity's prior edge position/inversion and switch legs.
     local geometry, geometryReason = effectiveGeometry(entity.defaults, submittedData)
     if not geometry then return false, geometryReason end
@@ -414,14 +422,14 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
     -- independently of loaded squares and reconstructed with a fresh origin.
     local saved = { id = owner }
     if geometry.kind == "turn" then
-        saved.nodes = GraphData.copy(geometry.nodes)
+        saved.nodes = GraphData.copy(submittedData.nodes)
     else
-        saved.at = GraphData.copy(geometry.at)
-        saved.switch = GraphData.copy(geometry.switch)
-        saved.throughNodes = GraphData.copy(geometry.throughNodes)
-        saved.divergingNodes = GraphData.copy(geometry.divergingNodes)
+        saved.at = GraphData.copy(submittedData.at)
+        saved.switch = GraphData.copy(submittedData.switch)
+        saved.throughNodes = GraphData.copy(submittedData.throughNodes)
+        saved.divergingNodes = GraphData.copy(submittedData.divergingNodes)
     end
-    objectData[OBJECT_DATA_KEY] = saved
+    masterModData[OBJECT_DATA_KEY] = saved
     if isServer() then entity.master:transmitModData() end
     transmitWorldData()
     log("saved geometry for " .. tostring(owner) .. " from " .. tostring(entity.entityName)
@@ -431,19 +439,23 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
 end
 
 --- Performs deferred OnCreate initialization unless the owner is already registered.
+---@param object IsoObject
+---@param requestedFacing string?
+---@return boolean, string?
 local function initialize(object, requestedFacing)
     local entity, reason = EntityDescriptor.describe(object, requestedFacing)
     if not entity then
         log("initialization skipped: " .. tostring(reason))
-        return false
+        return false, reason
     end
-    local objectData = entity.master:getModData()
-    local waymanData = objectData[OBJECT_DATA_KEY]
+
+    local waymanData = entity.master:getModData()[OBJECT_DATA_KEY] or {}
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
-    if waymanData and ownerExists(worldData, waymanData.id) then
+    if ownerExists(worldData, waymanData.id) then
         log("already initialized: " .. tostring(waymanData.id))
         return true
     end
+
     return RailroaderWaymanEntityRuntime.SaveGeometry(
         entity.master, waymanData, entity.facing)
 end
@@ -560,7 +572,7 @@ end
 
 --- Queues authoritative initialization for a newly built multi-square entity.
 function RailroaderWaymanEntityRuntime.OnCreate(params)
-    -- Clients wait for the authoritative object's modData from SP/the server.
+    -- Clients wait for the authoritative object's modData from SP/server.
     if isClient() then
         log("OnCreate ignored on client")
         return

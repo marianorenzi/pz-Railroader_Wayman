@@ -141,7 +141,7 @@ local function hoveredIdentifier(map, data, state)
     for _, block in ipairs(data.availableNodes or {}) do
         local visible = state.showAvailableNodes or block.blockId == state.selectedAvailableBlockId
         if visible then
-            for _, node in ipairs(block.nodes or {}) do
+            for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do
                 local x, y = toUI(map, node)
                 local dx, dy = mouseX - x, mouseY - y
                 local distance = dx * dx + dy * dy
@@ -204,7 +204,7 @@ local function drawGraph(map)
     for _, block in ipairs(data.availableNodes or {}) do
         local selected = block.blockId == state.selectedAvailableBlockId
         if state.showAvailableNodes or selected then
-            for _, node in ipairs(block.nodes or {}) do
+            for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do
                 local x, y = toUI(map, node)
                 local color = selected and { r = 1.00, g = 0.20, b = 0.85 }
                     or { r = 0.10, g = 0.90, b = 1.00 }
