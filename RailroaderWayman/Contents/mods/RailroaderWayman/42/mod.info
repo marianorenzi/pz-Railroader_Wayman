@@ -1,6 +1,7 @@
 name=Railroader: Wayman
 id=RailroaderWayman
 author=manoplin
+modversion=0.1.0
 description=Buildable railway track pieces for Railroader (Build 42).
 require=Railroader
 versionMin=42.0.0

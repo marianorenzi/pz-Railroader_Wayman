@@ -15,6 +15,7 @@ local Descriptor = RailroaderWaymanEntityDescriptor
 local Highlights = RailroaderWaymanWorldHighlights
 local OBJECT_DATA_KEY = "railroaderWayman"
 local HIGHLIGHT_GROUP = "node-editor"
+local HOVER_HIGHLIGHT_GROUP = "node-editor-hover"
 local SPACING, BUTTON_H = 10, 25
 
 --- Restores saved session bounds while keeping the window on the current screen.
@@ -53,6 +54,20 @@ local function blockColor(id)
     return Highlights.colors.nodes
 end
 
+local function colorWithAlpha(color, alpha)
+    return { r = color.r, g = color.g, b = color.b, a = alpha }
+end
+
+--- Returns the loaded world square currently under the mouse cursor.
+local function squareAtMouse(editor)
+    local player = getSpecificPlayer(editor.playerNum) or getPlayer()
+    if not player then return nil end
+    local z = math.floor(player:getZ())
+    local x = math.floor(screenToIsoX(editor.playerNum, getMouseX(), getMouseY(), z))
+    local y = math.floor(screenToIsoY(editor.playerNum, getMouseX(), getMouseY(), z))
+    return getCell():getGridSquare(x, y, z)
+end
+
 local function readBlocks(instance)
     local blocks = {}
     local function add(id, singleton)
@@ -63,6 +78,7 @@ local function readBlocks(instance)
             nodes = nodes,
             singleton = singleton,
             isDefault = isDefault,
+            origin = copy(instance.origin),
         })
     end
     if instance.defaults.kind == "turn" then
@@ -104,7 +120,13 @@ function NodeEditor:layoutNodeLists()
     self.nodeBlockList:setWidth(listWidth)
     self.nodeBlockList:setHeight(listHeight)
     local buttonX, buttonY = listWidth + SPACING, 43
-    for _, button in ipairs({ self.addButton, self.removeButton, self.moveUpButton, self.moveDownButton }) do
+    for _, button in ipairs({
+        self.addButton,
+        self.removeButton,
+        self.moveUpButton,
+        self.moveDownButton,
+        self.editNodeButton,
+    }) do
         button:setX(buttonX)
         button:setY(buttonY)
         button:setWidth(buttonWidth)
@@ -130,7 +152,12 @@ function NodeEditor:isKeyConsumed(key)
 end
 
 function NodeEditor:onKeyRelease(key)
-    if self:getIsVisible() and key == Keyboard.KEY_ESCAPE then self:close() end
+    if not self:getIsVisible() or key ~= Keyboard.KEY_ESCAPE then return end
+    if self.editingNode then
+        self:cancelNodeEditing()
+    else
+        self:close()
+    end
 end
 
 function NodeEditor:createChildren()
@@ -157,6 +184,8 @@ function NodeEditor:createChildren()
     self.removeButton = addButton(self.nodePanel, 0, 0, 90, WaymanLocalization.ui("Remove"), self, self.onRemove)
     self.moveUpButton = addButton(self.nodePanel, 0, 0, 90, WaymanLocalization.ui("MoveUp"), self, self.onMoveUp)
     self.moveDownButton = addButton(self.nodePanel, 0, 0, 90, WaymanLocalization.ui("MoveDown"), self, self.onMoveDown)
+    self.editNodeButton = addButton(self.nodePanel, 0, 0, 90,
+        WaymanLocalization.ui("EditNode"), self, self.onEditNode)
 
     self.nodeList = NodeTable:new(0, 43, 250, self.nodePanel.height - 55, WaymanLocalization.ui("Nodes"))
     self.nodeList:initialise()
@@ -191,10 +220,14 @@ function NodeEditor:updateButtons()
     local _, index = self.nodeList:getSelectedNode()
     local count = block and #block.nodes or 0
     local canChangeCount = block and block.blockId ~= "at" and block.blockId ~= "switch"
-    self.addButton:setEnable(canChangeCount == true)
-    self.removeButton:setEnable(canChangeCount == true and index ~= nil and index > 0)
-    self.moveUpButton:setEnable(index ~= nil and index > 1)
-    self.moveDownButton:setEnable(index ~= nil and index > 0 and index < count)
+    local editing = self.editingNode ~= nil
+    self.addButton:setEnable(not editing and canChangeCount == true)
+    self.removeButton:setEnable(not editing and canChangeCount == true and index ~= nil and index > 0)
+    self.moveUpButton:setEnable(not editing and index ~= nil and index > 1)
+    self.moveDownButton:setEnable(not editing and index ~= nil and index > 0 and index < count)
+    self.editNodeButton:setEnable(not editing and index ~= nil and index > 0)
+    if self.reloadButton then self.reloadButton:setEnable(not editing) end
+    if self.applyButton then self.applyButton:setEnable(not editing) end
 end
 
 function NodeEditor:refreshBlockList(selectedId)
@@ -232,13 +265,24 @@ end
 
 function NodeEditor:refreshHighlights()
     local entries = {}
+    local editingEntry
     for _, block in ipairs(self.blocks) do
-        for _, node in ipairs(block.nodes) do
+        for index, node in ipairs(block.nodes) do
+            local color = blockColor(block.blockId)
+            local isEditing = self.editingBlock == block and self.editingIndex == index
+            if isEditing then
+                color = colorWithAlpha(color, 1)
+            end
             local entry = Highlights.highlightRelativeNodeEntry(
-                self.instance, node, self.playerNum, blockColor(block.blockId))
-            if entry then table.insert(entries, entry) end
+                self.instance, node, self.playerNum, color)
+            if isEditing then
+                editingEntry = entry
+            elseif entry then
+                table.insert(entries, entry)
+            end
         end
     end
+    if editingEntry then table.insert(entries, editingEntry) end
     Highlights.replaceGroup(HIGHLIGHT_GROUP, entries)
 end
 
@@ -297,6 +341,75 @@ end
 function NodeEditor:onMoveUp() self:moveSelected(-1) end
 function NodeEditor:onMoveDown() self:moveSelected(1) end
 
+--- Starts world-square selection for the currently selected node.
+function NodeEditor:onEditNode()
+    local node, index = self.nodeList:getSelectedNode()
+    if not self.selectedBlock or not node or not index or index < 1 then return end
+    self.editingNode = node
+    self.editingBlock = self.selectedBlock
+    self.editingIndex = index
+    self:updateButtons()
+    self:refreshHighlights()
+    self:updateNodeEditHover()
+end
+
+--- Restores normal highlights without changing the node.
+function NodeEditor:cancelNodeEditing()
+    self.editingNode = nil
+    self.editingBlock = nil
+    self.editingIndex = nil
+    Highlights.clearGroup(HOVER_HIGHLIGHT_GROUP)
+    self:updateButtons()
+    self:refreshHighlights()
+end
+
+--- Highlights the world square under the cursor while editing a node.
+function NodeEditor:updateNodeEditHover()
+    if not self.editingNode or not self:getIsVisible() then
+        Highlights.clearGroup(HOVER_HIGHLIGHT_GROUP)
+        return
+    end
+    local mouseX, mouseY = getMouseX(), getMouseY()
+    if mouseX >= self.x and mouseX <= self.x + self.width
+        and mouseY >= self.y and mouseY <= self.y + self.height then
+        Highlights.clearGroup(HOVER_HIGHLIGHT_GROUP)
+        return
+    end
+    local square = squareAtMouse(self)
+    if not square then
+        Highlights.clearGroup(HOVER_HIGHLIGHT_GROUP)
+        return
+    end
+    Highlights.replaceGroup(HOVER_HIGHLIGHT_GROUP, {
+        {
+            x = square:getX(),
+            y = square:getY(),
+            z = square:getZ(),
+            playerNum = self.playerNum,
+            color = colorWithAlpha(blockColor(self.editingBlock.blockId), 0.8),
+        },
+    })
+end
+
+--- Commits the selected world square as coordinates relative to the block origin.
+function NodeEditor:commitNodeEdit(square)
+    local block, index = self.editingBlock, self.editingIndex
+    local origin = block and block.origin
+    if not block or not origin or not index or not block.nodes[index] then return end
+    block.nodes[index] = {
+        x = square:getX() - origin.x,
+        y = square:getY() - origin.y,
+        z = square:getZ() - origin.z,
+    }
+    block.isDefault = false
+    self.editingNode = nil
+    self.editingBlock = nil
+    self.editingIndex = nil
+    Highlights.clearGroup(HOVER_HIGHLIGHT_GROUP)
+    self:refreshNodeList(index)
+    self:setDirty()
+end
+
 function NodeEditor:onRestoreDefault(block)
     if not block or block.isDefault then return end
     local value = self.instance.defaults[block.blockId]
@@ -340,6 +453,7 @@ end
 
 -- Reload is deliberately local: the object modData is the authoritative source requested here.
 function NodeEditor:onReload()
+    if self.editingNode then self:cancelNodeEditing() end
     self.instance.data = self.instance.master:getModData()[OBJECT_DATA_KEY] or {}
     self.blocks = readBlocks(self.instance)
     self.selectedBlock = nil
@@ -373,6 +487,7 @@ function NodeEditor:close()
         height = self.height,
     }
     Highlights.clearGroup(HIGHLIGHT_GROUP)
+    Highlights.clearGroup(HOVER_HIGHLIGHT_GROUP)
     self:setVisible(false)
     self:removeFromUIManager()
     if Controller.instance == self then Controller.instance = nil end
@@ -417,5 +532,22 @@ local function onServerCommand(module, command, args)
     end
 end
 
+local function onTick()
+    local editor = Controller.instance
+    if editor and editor.editingNode then editor:updateNodeEditHover() end
+end
+
+local function onMouseDown()
+    local editor = Controller.instance
+    if not editor or not editor.editingNode or not editor:getIsVisible() then return end
+    local mouseX, mouseY = getMouseX(), getMouseY()
+    if mouseX >= editor.x and mouseX <= editor.x + editor.width
+        and mouseY >= editor.y and mouseY <= editor.y + editor.height then return end
+    local square = squareAtMouse(editor)
+    if square then editor:commitNodeEdit(square) end
+end
+
 Events.OnServerCommand.Add(onServerCommand)
+Events.OnTick.Add(onTick)
+Events.OnMouseDown.Add(onMouseDown)
 return Controller
