@@ -8,6 +8,7 @@ local GraphData = RailroaderWaymanGraphData
 ---@field availableNodes WaymanNodeBlock[]
 ---@field edges table<string,WaymanNodeBlock[]>
 ---@field switches WaymanTurnout[]
+---@field origin {edge:string, toward:string, s:number?}?
 ---@field revision integer
 ---@field nextEdgeId integer
 
@@ -307,6 +308,7 @@ end
 
 --- Returns one node block's nodes in absolute world coordinates.
 --- @param block WaymanNodeBlock
+--- @return WaymanNode[]
 function GraphData.getAbsoluteNodes(block)
     local result = {}
     for _, node in ipairs(block and block.nodes or {}) do
@@ -317,6 +319,7 @@ end
 
 --- Flattens ordered node blocks into absolute coordinates, applying inversion.
 ---@param blocks WaymanNodeBlock[]
+---@return WaymanNode[]
 function GraphData.getOrderedNodes(blocks)
     local nodes = {}
     for _, block in ipairs(blocks or {}) do
@@ -378,6 +381,9 @@ local function allocateEdgeId(value, reserved)
 end
 
 --- Validates and normalizes an atomic client draft against canonical server data.
+--- @param worldData WaymanGraphData
+--- @param draft WaymanGraphData
+--- @return WaymanGraphData?,string?
 function GraphData.validateDraft(worldData, draft)
     -- Reject malformed or stale snapshots before deriving any result state.
     GraphData.ensure(worldData)
@@ -453,6 +459,8 @@ function GraphData.validateDraft(worldData, draft)
 
     -- Switch identity and geometry remain canonical; only complete leg pairs
     -- may be changed by the draft.
+    local allowMainEdge = type(draft.origin) == "table"
+        and draft.origin.edge == "main"
     local canonicalSwitches = {}
     for _, switch in ipairs(worldData.switches) do canonicalSwitches[switch.id] = switch end
     local seenSwitches = {}
@@ -472,7 +480,9 @@ function GraphData.validateDraft(worldData, draft)
                 return nil, "switch " .. tostring(requested.id) .. " leg " .. legName
                     .. " must define edge and toward together"
             end
-            if edge and not result.edges[edge] then return nil, "switch references missing edge " .. edge end
+            if edge and not result.edges[edge] and not (allowMainEdge and edge == "main") then
+                return nil, "switch references missing edge " .. edge
+            end
             if toward and toward ~= "start" and toward ~= "end" then
                 return nil, "invalid switch toward " .. tostring(toward)
             end
@@ -484,8 +494,53 @@ function GraphData.validateDraft(worldData, draft)
         if not seenSwitches[switchId] then return nil, "draft omits switch " .. switchId end
     end
 
+    -- Origin is optional and leniently normalized to RR's defaults.
+    local originReason
+    if draft.origin ~= nil then
+        local requested = draft.origin
+        local origin
+        if type(requested) ~= "table" then
+            requested = {}
+            originReason = "invalid graph origin"
+        end
+
+        local edge
+        if type(requested.edge) ~= "string" then
+            originReason = "origin edge must be a string"
+        else
+            edge = edgeIdMap[requested.edge] or requested.edge
+            if edge ~= "main" and not result.edges[edge] then
+                originReason = "origin references missing edge " .. edge
+                edge = nil
+            end
+        end
+        if edge then
+            origin = { edge = edge }
+        end
+
+        local toward = requested.toward
+        if toward ~= "start" and toward ~= "end" then
+            originReason = "origin toward must be start or end"
+            toward = "end"
+        end
+        if origin then
+            origin.toward = toward
+        end
+
+        local offset = requested.s
+        if offset ~= nil and (type(offset) ~= "number" or offset ~= offset
+            or offset == math.huge or offset == -math.huge) then
+            originReason = "origin offset must be a finite number"
+            offset = nil
+        end
+        if offset and origin then
+            origin.s = offset
+        end
+        result.origin = origin
+    end
+
     result.nextEdgeId = nextEdgeId
-    return result, nil, edgeIdMap
+    return result, originReason
 end
 
 return GraphData

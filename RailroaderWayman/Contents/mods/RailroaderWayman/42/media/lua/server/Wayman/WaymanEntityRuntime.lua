@@ -483,6 +483,9 @@ function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision)
         log("graph update rejected: " .. tostring(reason))
         return false, reason
     end
+    if reason then
+        log("graph origin normalized: " .. tostring(reason))
+    end
     local rrDefinition, rrReason = RRGraph.export(normalized)
     if not rrDefinition then
         log("graph update rejected by RR export: " .. tostring(rrReason))
@@ -491,6 +494,7 @@ function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision)
     worldData.availableNodes = normalized.availableNodes
     worldData.edges = normalized.edges
     worldData.switches = normalized.switches
+    worldData.origin = normalized.origin
     worldData.nextEdgeId = normalized.nextEdgeId
     worldData.revision = normalized.revision
     transmitWorldData()
