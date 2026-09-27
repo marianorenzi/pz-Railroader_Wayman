@@ -201,6 +201,7 @@ local function selectBlockAt(blockTable, index)
     blockTable.data.selected = item and index or -1
     blockTable.data.block = item and item.item or nil
     blockTable.onBlockSelected(blockTable.data.block, blockTable.data.selected)
+    if item then blockTable.data:ensureVisible(index) end
 end
 
 --- Clears a NodeBlockTable selection and synchronizes its action controls.
@@ -243,6 +244,7 @@ function GraphEditor:createEdgePanel()
         self.moveUpButton:setEnable(block ~= nil and index > 1)
         self.moveDownButton:setEnable(block ~= nil and index < #(self.edgeList:getBlocks()))
         self.invertButton:setEnable(block and #(block.nodes or {}) > 1)
+        Controller.selectedEdgeBlockId = block and block.blockId or nil
     end
     self.edgesPanel:addChild(self.edgeList)
 
@@ -491,6 +493,7 @@ end
 --- Rebuilds the ordered rows for the currently selected edge.
 function GraphEditor:refreshEdgeList()
     self.edgeList:clear()
+    Controller.selectedEdgeBlockId = nil
     for _, block in ipairs(self:getSelectedEdgeBlocks()) do self.edgeList:addItem(block.blockId, block) end
 end
 
@@ -551,6 +554,39 @@ end
 function GraphEditor:onEdgeSelected(_combo)
     Controller.selectedEdgeId = self:getSelectedEdgeId()
     self:refreshEdgeList()
+end
+
+--- Opens the edge tab and selects an edge from an external map interaction.
+function GraphEditor:selectEdgeFromMap(edgeId)
+    if not edgeId or not self.draft.edges[edgeId] then return false end
+    self.tabs:activateView(WaymanLocalization.ui("Edges"))
+    self.edgeCombo:setSelectedData(edgeId)
+    self:onEdgeSelected(self.edgeCombo)
+    return true
+end
+
+--- Selects an available block from an external map interaction.
+function GraphEditor:selectAvailableBlockFromMap(blockId)
+    self.tabs:activateView(WaymanLocalization.ui("Edges"))
+    for index, item in ipairs(self.availableList.data.items) do
+        if item.item and item.item.blockId == blockId then
+            selectBlockAt(self.availableList, index)
+            return true
+        end
+    end
+    return false
+end
+
+--- Selects one block belonging to the currently selected edge.
+function GraphEditor:selectEdgeBlockFromMap(edgeId, blockId)
+    if not self:selectEdgeFromMap(edgeId) then return false end
+    for index, item in ipairs(self.edgeList.data.items) do
+        if item.item and item.item.blockId == blockId then
+            selectBlockAt(self.edgeList, index)
+            return true
+        end
+    end
+    return false
 end
 
 --- Creates an empty draft edge using a validated custom or generated ID.
@@ -910,11 +946,34 @@ function Controller.getOverlayState(confirmedData)
     return {
         data = editor and editor.draft or confirmedData,
         selectedEdgeId = editor and editor:getSelectedEdgeId() or nil,
+        selectedEdgeBlockId = editor and Controller.selectedEdgeBlockId or nil,
         selectedAvailableBlockId = editor and Controller.selectedAvailableBlockId or nil,
         showAllEdges = options.showAllEdges,
         showAvailableNodes = options.showAvailableNodes,
         showSelectedEdge = options.showSelectedEdge,
     }
+end
+
+--- Applies a world-map hit to the visible editor and restores its z-order.
+function Controller.selectFromMap(target)
+    local editor = Controller.instance
+    if not editor or not editor:getIsVisible() then return false end
+    local selected = false
+    if target and target.kind == "availableBlock" then
+        selected = editor:selectAvailableBlockFromMap(target.blockId)
+    elseif target and target.kind == "edge" then
+        selected = editor:selectEdgeFromMap(target.edgeId)
+    elseif target and target.kind == "edgeBlock" then
+        selected = editor:selectEdgeBlockFromMap(target.edgeId, target.blockId)
+    end
+    editor:bringToTop()
+    return selected
+end
+
+--- Keeps the visible editor above the world map after map interactions.
+function Controller.bringToTop()
+    local editor = Controller.instance
+    if editor and editor:getIsVisible() then editor:bringToTop() end
 end
 
 --- Delivers authoritative global data to the active editor, when present.

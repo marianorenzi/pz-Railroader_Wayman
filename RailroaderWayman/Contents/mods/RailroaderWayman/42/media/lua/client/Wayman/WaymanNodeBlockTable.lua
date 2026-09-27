@@ -5,6 +5,7 @@ require "Wayman/WaymanLocalization"
 local ROW_H = 28
 local DEFAULT_W = 100
 local COUNT_W = 52
+local SCROLLBAR_W = 13
 
 ---@class WaymanNodeBlockHeader : ISPanel
 ---@field title string
@@ -18,15 +19,21 @@ function NodeBlockHeader:new(x, y, width, height, title, showDefault)
 end
 
 function NodeBlockHeader:render()
+    -- title
     local w = getTextManager():MeasureStringX(UIFont.Small, self.title)
     local titleX = math.max(0, math.floor((self.width - w) / 2))
     self:drawText(self.title, titleX, 3, 1, 1, 1, 1, UIFont.Small)
+    -- block id
     self:drawText(WaymanLocalization.ui("BlockId"), 8, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+
+    -- nr nodes
     local t = WaymanLocalization.ui("NrNodes")
     w = getTextManager():MeasureStringX(UIFont.Small, t)
-    local countRight = self.showDefault and (self.width - DEFAULT_W) or self.width
+    local countRight = self.width - (self.showDefault and DEFAULT_W or SCROLLBAR_W)
     self:drawText(t, countRight - COUNT_W + math.max(0, (COUNT_W - w) / 2),
         3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+
+    -- default checkbox
     if self.showDefault then
         t = WaymanLocalization.ui("Default")
         w = getTextManager():MeasureStringX(UIFont.Small, t)
@@ -95,7 +102,7 @@ function NodeBlockList:doDrawItem(y, item, alt)
     self:drawText(item.item.blockId, 8, y + 5, 1, 1, 1, 1, UIFont.Small)
     local count = tostring(#(item.item.nodes or {}))
     local countW = getTextManager():MeasureStringX(UIFont.Small, count)
-    local countRight = self.showDefault and (self.width - DEFAULT_W) or self.width
+    local countRight = self.width - (self.showDefault and DEFAULT_W or SCROLLBAR_W)
     self:drawText(count, countRight - COUNT_W + math.max(0, (COUNT_W - countW) / 2),
         y + 5, 0.75, 0.75, 0.75, 1, UIFont.Small)
     if self.showDefault then

@@ -212,6 +212,8 @@ local function validateGraphState(worldData)
         end
     end
 
+    local allowMainEdge = type(worldData.origin) == "table"
+        and worldData.origin.edge == "main"
     local seenSwitches = {}
     for _, switch in ipairs(worldData.switches or {}) do
         if type(switch) ~= "table" or type(switch.id) ~= "string" or seenSwitches[switch.id]
@@ -224,7 +226,8 @@ local function validateGraphState(worldData)
             if (leg.edge == nil) ~= (leg.toward == nil) then
                 return false, "incomplete " .. legName .. " leg on " .. switch.id
             end
-            if leg.edge and not worldData.edges[leg.edge] then
+            if leg.edge and not worldData.edges[leg.edge]
+                and not (allowMainEdge and leg.edge == "main") then
                 return false, "switch " .. switch.id .. " references missing edge " .. leg.edge
             end
             if leg.toward and leg.toward ~= "start" and leg.toward ~= "end" then
