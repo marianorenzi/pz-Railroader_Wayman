@@ -100,7 +100,7 @@ local function toUI(map, node)
     return map.mapAPI:worldToUIX(node.x, node.y), map.mapAPI:worldToUIY(node.x, node.y)
 end
 
---- Draws one ordered edge polyline and selected-node markers.
+--- Draws one ordered edge polyline.
 local function drawEdge(map, blocks, color, selected)
     local nodes = GraphData.getOrderedNodes(blocks)
     for index = 2, #nodes do
@@ -109,8 +109,12 @@ local function drawEdge(map, blocks, color, selected)
         map:drawLine(nil, x1, y1, x2, y2, selected and 4 or 2,
             selected and 1.0 or 0.75, color.r, color.g, color.b)
     end
-    if selected then
-        for _, node in ipairs(nodes) do
+end
+
+--- Draws every node marker from an edge's ordered blocks.
+local function drawEdgeNodes(map, blocks, color)
+    for _, block in ipairs(blocks or {}) do
+        for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do
             local x, y = toUI(map, node)
             drawPoint(map, x, y, color)
         end
@@ -132,25 +136,11 @@ local function pointSegmentDistanceSquared(px, py, x1, y1, x2, y2)
     return dx * dx + dy * dy
 end
 
---- Finds the nearest visible node block or edge under the map cursor.
-local function hoveredIdentifier(map, data, state)
+--- Finds the topmost visible node block or edge under the map cursor.
+local function graphHit(map, data, state, mouseX, mouseY)
     if map.isMouseOver and not map:isMouseOver() then return nil end
-    local mouseX, mouseY = map:getMouseX(), map:getMouseY()
-    local bestLabel, bestDistance = nil, 64
-
-    for _, block in ipairs(data.availableNodes or {}) do
-        local visible = state.showAvailableNodes or block.blockId == state.selectedAvailableBlockId
-        if visible then
-            for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do
-                local x, y = toUI(map, node)
-                local dx, dy = mouseX - x, mouseY - y
-                local distance = dx * dx + dy * dy
-                if distance <= bestDistance then
-                    bestLabel, bestDistance = getText("UI_Wayman_MapNode", block.blockId), distance
-                end
-            end
-        end
-    end
+    mouseX, mouseY = mouseX or map:getMouseX(), mouseY or map:getMouseY()
+    local bestLabel, bestTarget, bestDistance, bestPriority = nil, nil, 64, -1
 
     for edgeId, blocks in pairs(data.edges or {}) do
         local visible = state.showAllEdges
@@ -161,13 +151,57 @@ local function hoveredIdentifier(map, data, state)
                 local x1, y1 = toUI(map, nodes[index - 1])
                 local x2, y2 = toUI(map, nodes[index])
                 local distance = pointSegmentDistanceSquared(mouseX, mouseY, x1, y1, x2, y2)
-                if distance <= bestDistance then
-                    bestLabel, bestDistance = getText("UI_Wayman_MapEdge", edgeId), distance
+                if distance <= 64
+                    and (bestPriority < 0 or (bestPriority == 0 and distance <= bestDistance)) then
+                    bestLabel, bestDistance, bestPriority =
+                        getText("UI_Wayman_MapEdge", edgeId), distance, 0
+                    bestTarget = { kind = "edge", edgeId = edgeId }
                 end
             end
         end
     end
-    return bestLabel, mouseX, mouseY
+
+    local selectedAvailableBlock
+    local function inspectBlock(block, priority, kind, edgeId)
+        for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do
+            local x, y = toUI(map, node)
+            local dx, dy = mouseX - x, mouseY - y
+            local distance = dx * dx + dy * dy
+            if distance <= 64
+                and (priority > bestPriority
+                    or (priority == bestPriority and distance <= bestDistance)) then
+                bestLabel = getText("UI_Wayman_MapNode", block.blockId)
+                bestDistance, bestPriority = distance, priority
+                bestTarget = { kind = kind, edgeId = edgeId, blockId = block.blockId }
+            end
+        end
+    end
+
+    -- Node markers have priority over edge segments.
+    for _, block in ipairs(data.availableNodes or {}) do
+        if block.blockId == state.selectedAvailableBlockId then
+            selectedAvailableBlock = block
+        elseif state.showAvailableNodes then
+            inspectBlock(block, 1, "availableBlock")
+        end
+    end
+
+    -- Selected-edge nodes are visible markers and must expose their block tooltip.
+    local selectedEdgeBlock
+    if state.showSelectedEdge and state.selectedEdgeId and data.edges then
+        for _, block in ipairs(data.edges[state.selectedEdgeId] or {}) do
+            if block.blockId == state.selectedEdgeBlockId then
+                selectedEdgeBlock = block
+            else
+                inspectBlock(block, 2, "edgeBlock", state.selectedEdgeId)
+            end
+        end
+    end
+
+    if selectedEdgeBlock then inspectBlock(selectedEdgeBlock, 3, "edgeBlock", state.selectedEdgeId) end
+    if selectedAvailableBlock then inspectBlock(selectedAvailableBlock, 4, "availableBlock") end
+
+    return bestLabel, mouseX, mouseY, bestTarget
 end
 
 --- Draws a viewport-clamped identifier tooltip beside the map cursor.
@@ -190,6 +224,8 @@ local function drawGraph(map)
     local state = Editor.getOverlayState(confirmed)
     local data = state.data
     if type(data) ~= "table" then return end
+    local selectedEdgeBlocks
+    local selectedEdgeBlock
     if state.showAllEdges then
         for edgeId, blocks in pairs(data.edges or {}) do
             if edgeId ~= state.selectedEdgeId or not state.showSelectedEdge then
@@ -199,20 +235,46 @@ local function drawGraph(map)
     end
     if state.showSelectedEdge and state.selectedEdgeId
         and data.edges and data.edges[state.selectedEdgeId] then
-        drawEdge(map, data.edges[state.selectedEdgeId], { r = 1.0, g = 0.85, b = 0.1 }, true)
+        selectedEdgeBlocks = data.edges[state.selectedEdgeId]
+        drawEdge(map, selectedEdgeBlocks, { r = 1.0, g = 0.85, b = 0.1 }, true)
+        for _, block in ipairs(selectedEdgeBlocks) do
+            if block.blockId == state.selectedEdgeBlockId then selectedEdgeBlock = block break end
+        end
     end
+
+    local selectedBlock
     for _, block in ipairs(data.availableNodes or {}) do
         local selected = block.blockId == state.selectedAvailableBlockId
-        if state.showAvailableNodes or selected then
+        if selected then
+            selectedBlock = block
+        elseif state.showAvailableNodes then
             for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do
                 local x, y = toUI(map, node)
-                local color = selected and { r = 1.00, g = 0.20, b = 0.85 }
-                    or { r = 0.10, g = 0.90, b = 1.00 }
-                drawPoint(map, x, y, color)
+                drawPoint(map, x, y, { r = 0.10, g = 0.90, b = 1.00 })
             end
         end
     end
-    drawHoverLabel(map, hoveredIdentifier(map, data, state))
+
+    -- Selected-edge nodes sit above normal available nodes.
+    if selectedEdgeBlocks then
+        drawEdgeNodes(map, selectedEdgeBlocks, { r = 1.0, g = 0.85, b = 0.1 })
+    end
+
+    if selectedEdgeBlock then
+        for _, node in ipairs(GraphData.getAbsoluteNodes(selectedEdgeBlock)) do
+            local x, y = toUI(map, node)
+            drawPoint(map, x, y, { r = 1.00, g = 0.20, b = 0.85 })
+        end
+    end
+
+    -- Available selection remains topmost when both selections overlap.
+    if selectedBlock then
+        for _, node in ipairs(GraphData.getAbsoluteNodes(selectedBlock)) do
+            local x, y = toUI(map, node)
+            drawPoint(map, x, y, { r = 1.00, g = 0.20, b = 0.85 })
+        end
+    end
+    drawHoverLabel(map, graphHit(map, data, state))
 end
 
 --- Opens the singleton graph editor using the latest client graph snapshot.
@@ -244,6 +306,25 @@ local originalRender = ISWorldMap.render
 function ISWorldMap:render()
     originalRender(self)
     drawGraph(self)
+end
+
+local originalOnMouseDown = ISWorldMap.onMouseDown
+--- Selects clicked graph elements and keeps the graph editor above the map.
+function ISWorldMap:onMouseDown(x, y)
+    local result = originalOnMouseDown(self, x, y)
+    local confirmed = worldData or ModData.get(WORLD_DATA_KEY)
+    local state = Editor.getOverlayState(confirmed)
+    if type(state.data) == "table" then
+        local _, _, _, target = graphHit(self, state.data, state, x, y)
+        if target then
+            Editor.selectFromMap(target)
+        else
+            Editor.bringToTop()
+        end
+    else
+        Editor.bringToTop()
+    end
+    return result
 end
 
 --- Forwards server-side graph rejection messages to the active editor.
