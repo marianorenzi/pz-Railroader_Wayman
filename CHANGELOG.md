@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.2.0
+
+### New
+
+- Added support for extending Railroader's existing `main` network. Wayman edges and switches are merged into a preserved copy of the original Railroader graph.
+- Added an Origin tab to the Graph Editor for selecting an edge, travel direction, and optional route offset.
+- Added interactive World Map selection:
+    - Clicking an edge selects it in the Graph Editor.
+    - Clicking an available node selects its node block.
+    - Clicking a node on the selected edge selects its edge block.
+- Added graph snapshots to `console.txt` before and after Railroader export for diagnostics.
+
+### Changed
+
+- The World Map now keeps the Graph Editor on top during map interaction.
+- Selected edge blocks are highlighted independently from available blocks, with improved marker layering and tooltips for overlapping nodes.
+- Programmatic node-block selections now scroll their tables to the selected row.
+- Switch interaction-place metadata is preserved and exported to Railroader.
+- The node-count column now accounts for the list scrollbar when the Default column is hidden.
+
+### Fixed
+
+- Fixed selected edge nodes being rendered with the same color as the rest of the edge.
+
 ## 0.1.1
 
 - Fixed the Graph Editor's Move Up and Move Down actions not reordering the selected node block.
