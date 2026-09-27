@@ -6,6 +6,14 @@ require "ISUI/ISPanel"
 RailroaderWaymanWorldHighlights = RailroaderWaymanWorldHighlights or {}
 local Highlights = RailroaderWaymanWorldHighlights
 
+---@class WaymanHighlightEntry
+---@field playerNum integer
+---@field x integer
+---@field y integer
+---@field z integer
+---@field color table?
+---@field size table?
+
 Highlights.colors = Highlights.colors or {
     at = { r = 1.0, g = 0.75, b = 0.05, a = 0.65 },
     switch = { r = 1.0, g = 0.10, b = 0.65, a = 0.65 },
@@ -70,6 +78,28 @@ end
 --- Clears every active world highlight group.
 function Highlights.clearAll()
     groups = {}
+end
+
+--- Converts one relative geometry node into a visible world highlight entry.
+--- @param instance WaymanEntityInstance
+--- @param node WaymanNode
+--- @param playerNum integer
+--- @param color table?
+--- @return WaymanHighlightEntry
+function Highlights.highlightRelativeNodeEntry(instance, node, playerNum, color)
+    local square = getCell():getGridSquare(
+        instance.origin.x + node.x,
+        instance.origin.y + node.y,
+        instance.origin.z + (node.z or 0)
+    )
+    if not square or not square:getFloor() then return nil end
+    return {
+        x = square:getX(),
+        y = square:getY(),
+        z = square:getZ(),
+        playerNum = playerNum,
+        color = color,
+    }
 end
 
 return Highlights

@@ -38,8 +38,9 @@ end
 local function matchesRelativeNodes(block, absoluteAt, staticAt, staticNodes)
     local expected = staticNodes
     if not expected or #expected == 0 then expected = { staticAt } end
-    if not block or #(block.nodes or {}) ~= #expected then return false end
-    for index, node in ipairs(block.nodes) do
+    local nodes = GraphData.getAbsoluteNodes(block)
+    if not block or #nodes ~= #expected then return false end
+    for index, node in ipairs(nodes) do
         local relative = expected[index]
         if math.abs((node.x - absoluteAt.x) - (relative.x - staticAt.x)) > EPSILON
             or math.abs((node.y - absoluteAt.y) - (relative.y - staticAt.y)) > EPSILON
@@ -84,6 +85,7 @@ local function resolveStaticPlace(worldData, switch)
 end
 
 --- Converts authoritative Wayman data into one RR TrackGraph definition.
+--- @param worldData WaymanGraphData
 function RRGraph.export(worldData)
     if type(worldData) ~= "table" then return nil, "world data must be a table" end
     local definition = { edges = {}, switches = {} }
@@ -97,20 +99,27 @@ function RRGraph.export(worldData)
     end
 
     for _, switch in ipairs(worldData.switches or {}) do
+        local absoluteAt = switch.at and GraphData.getAbsoluteNode(switch.origin, switch.at)
         local legs = switch.legs or {}
         local throat = copyLeg(legs.throat)
         local through = copyLeg(legs.through)
         local diverge = copyLeg(legs.diverge)
         local configured = throat or through or diverge
-        if configured and not (switch.id and switch.at and throat and through and diverge) then
+        if configured and not (switch.id and absoluteAt and throat and through and diverge) then
             return nil, "switch " .. tostring(switch.id) .. " is incomplete"
         end
         if configured then
-            local place, placeReason = resolveStaticPlace(worldData, switch)
+            local exportSwitch = GraphData.copy(switch)
+            exportSwitch.at = absoluteAt
+            local place = switch.place and GraphData.getAbsoluteNode(switch.origin, switch.place)
+            local placeReason
+            if not place then
+                place, placeReason = resolveStaticPlace(worldData, exportSwitch)
+            end
             if not place then return nil, placeReason end
             table.insert(definition.switches, {
                 id = switch.id,
-                at = copyNode(switch.at),
+                at = copyNode(absoluteAt),
                 throat = throat,
                 through = through,
                 diverge = diverge,
@@ -135,6 +144,7 @@ function RRGraph.export(worldData)
 end
 
 --- Registers the primary route and current graph through RR's replaceable integration boundary.
+---@param worldData WaymanGraphData
 function RRGraph.register(worldData)
     local definition, reason = RRGraph.export(worldData)
     if not definition then return false, reason end
@@ -151,7 +161,7 @@ function RRGraph.register(worldData)
     end
 
     local okRouteRegister, routeResult = pcall(Routes.register, NETWORK_ID, {
-        looped = false,
+        looped = true,
         nodes = waymanNodes,
     })
     if not okRouteRegister then return false, tostring(routeResult) end

@@ -5,7 +5,7 @@ module Base
         entity ES_WaymanDiagonalCrossingEdge
         {
             LuaWindowClass = ISEntityWindow,
-            DisplayName = Diagonal crossing edge,
+            DisplayName = WaymanEntityName_DiagonalCrossingEdge,
             Icon = Build_FloorTileWood,
         }
     }

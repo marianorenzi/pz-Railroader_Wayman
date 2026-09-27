@@ -1,0 +1,17 @@
+{
+    "WaymanEntityName_CrossingSegment": "Tramo de cruce",
+    "WaymanEntityName_DiagonalCrossingEdge": "Extremo de cruce diagonal",
+    "WaymanEntityName_DiagonalCrossingSegment": "Tramo de cruce diagonal",
+    "WaymanEntityName_DiagonalTrackSegment": "Tramo de vía diagonal",
+    "WaymanEntityName_Left45DegTurn": "Curva izquierda de 45°",
+    "WaymanEntityName_Left45DegTurnout": "Desvío izquierdo de 45°",
+    "WaymanEntityName_Left45DegTurnoutDiag": "Desvío diagonal izquierdo de 45°",
+    "WaymanEntityName_Left90DegTurnout": "Desvío izquierdo de 90°",
+    "WaymanEntityName_Right45DegTurn": "Curva derecha de 45°",
+    "WaymanEntityName_Right45DegTurnout": "Desvío derecho de 45°",
+    "WaymanEntityName_Right45DegTurnoutDiag": "Desvío diagonal derecho de 45°",
+    "WaymanEntityName_SymmetricalCompactThreeWayTurnout": "Desvío simétrico compacto de tres vías",
+    "WaymanEntityName_SymmetricalThreeWayTurnout": "Desvío simétrico de tres vías",
+    "WaymanEntityName_TrackSegment": "Tramo de vía",
+    "WaymanEntityName_WyeTurnout": "Desvío en Y"
+}

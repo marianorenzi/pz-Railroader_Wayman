@@ -1,0 +1,17 @@
+{
+    "WaymanEntityName_CrossingSegment": "Crossing segment",
+    "WaymanEntityName_DiagonalCrossingEdge": "Diagonal crossing edge",
+    "WaymanEntityName_DiagonalCrossingSegment": "Diagonal crossing segment",
+    "WaymanEntityName_DiagonalTrackSegment": "Diagonal track segment",
+    "WaymanEntityName_Left45DegTurn": "Left 45° turn",
+    "WaymanEntityName_Left45DegTurnout": "Left 45° turnout",
+    "WaymanEntityName_Left45DegTurnoutDiag": "Left 45° diagonal turnout",
+    "WaymanEntityName_Left90DegTurnout": "Left 90° turnout",
+    "WaymanEntityName_Right45DegTurn": "Right 45° turn",
+    "WaymanEntityName_Right45DegTurnout": "Right 45° turnout",
+    "WaymanEntityName_Right45DegTurnoutDiag": "Right 45° diagonal turnout",
+    "WaymanEntityName_SymmetricalCompactThreeWayTurnout": "Compact symmetrical three-way turnout",
+    "WaymanEntityName_SymmetricalThreeWayTurnout": "Symmetrical three-way turnout",
+    "WaymanEntityName_TrackSegment": "Track segment",
+    "WaymanEntityName_WyeTurnout": "Wye turnout"
+}

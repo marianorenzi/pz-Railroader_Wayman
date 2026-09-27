@@ -4,6 +4,36 @@
 RailroaderWaymanGraphData = RailroaderWaymanGraphData or {}
 local GraphData = RailroaderWaymanGraphData
 
+---@class WaymanGraphData: table
+---@field availableNodes WaymanNodeBlock[]
+---@field edges table<string,WaymanNodeBlock[]>
+---@field switches WaymanTurnout[]
+---@field revision integer
+---@field nextEdgeId integer
+
+---@class WaymanNode: table
+---@field x number
+---@field y number
+---@field z number
+
+---@class WaymanNodeBlock: table
+---@field owner string
+---@field id string
+---@field blockId string
+---@field origin table
+---@field nodes WaymanNode[]
+---@field invertNodes boolean?
+
+---@class WaymanTurnout: table
+---@field owner string
+---@field id string
+---@field turnoutId string
+---@field origin table
+---@field at WaymanNode
+---@field place WaymanNode?
+---@field through WaymanNode[]?
+---@field diverge WaymanNode[]?
+
 --- Deep-copies serializable graph data while preserving repeated table references.
 local function copy(value, seen)
     if type(value) ~= "table" then return value end
@@ -249,6 +279,8 @@ function GraphData.worldDataFromJSON(text)
 end
 
 --- Adds every required graph collection and counter to a world-data table.
+---@param worldData table
+---@return WaymanGraphData
 function GraphData.ensure(worldData)
     worldData.availableNodes = worldData.availableNodes or {}
     worldData.edges = worldData.edges or {}
@@ -258,11 +290,37 @@ function GraphData.ensure(worldData)
     return worldData
 end
 
---- Flattens ordered node blocks, applying each block's inversion flag.
+--- Converts one relative node into absolute world coordinates.
+--- A missing origin preserves compatibility with legacy absolute world data.
+---@param origin table
+---@param node table
+---@return WaymanNode
+function GraphData.getAbsoluteNode(origin, node)
+    if type(node) ~= "table" then return nil end
+    origin = type(origin) == "table" and origin or { x = 0, y = 0, z = 0 }
+    return {
+        x = (origin.x or 0) + node.x,
+        y = (origin.y or 0) + node.y,
+        z = (origin.z or 0) + (node.z or 0),
+    }
+end
+
+--- Returns one node block's nodes in absolute world coordinates.
+--- @param block WaymanNodeBlock
+function GraphData.getAbsoluteNodes(block)
+    local result = {}
+    for _, node in ipairs(block and block.nodes or {}) do
+        table.insert(result, GraphData.getAbsoluteNode(block.origin, node))
+    end
+    return result
+end
+
+--- Flattens ordered node blocks into absolute coordinates, applying inversion.
+---@param blocks WaymanNodeBlock[]
 function GraphData.getOrderedNodes(blocks)
     local nodes = {}
     for _, block in ipairs(blocks or {}) do
-        local source = block.nodes or {}
+        local source = GraphData.getAbsoluteNodes(block)
         if block.invertNodes then
             for index = #source, 1, -1 do table.insert(nodes, source[index]) end
         else

@@ -5,7 +5,7 @@ module Base
         entity ES_WaymanDiagonalTrackSegment
         {
             LuaWindowClass = ISEntityWindow,
-            DisplayName = Diagonal track segment,
+            DisplayName = WaymanEntityName_DiagonalTrackSegment,
             Icon = DiagonalTrackSegmentIcon,
         }
     }

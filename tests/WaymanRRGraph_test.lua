@@ -23,19 +23,23 @@ end
 local world = {
     availableNodes = {
         { blockId = "turnout_1:through", owner = "turnout_1", id = "through",
-            nodes = { { x = 12, y = 22 } } },
+            origin = { x = 10, y = 20, z = 0 },
+            nodes = { { x = 2, y = 2 } } },
     },
     edges = {
         wayman = {
-            { blockId = "turn_1:nodes", invertNodes = true, nodes = {
-                { x = 1, y = 1 }, { x = 2, y = 2 },
+            { blockId = "turn_1:nodes", invertNodes = true,
+                origin = { x = 10, y = 20, z = 0 }, nodes = {
+                { x = -9, y = -19 }, { x = -8, y = -18 },
             } },
             { blockId = "turnout_1:at", owner = "turnout_1", id = "at",
-                nodes = { { x = 12, y = 22 } } },
+                origin = { x = 10, y = 20, z = 0 },
+                nodes = { { x = 2, y = 2 } } },
         },
         diverge = {
             { blockId = "turnout_1:diverge", owner = "turnout_1", id = "diverge",
-                nodes = { { x = 16, y = 26 } } },
+                origin = { x = 10, y = 20, z = 0 },
+                nodes = { { x = 6, y = 6 } } },
             { blockId = "turn_2:nodes", nodes = { { x = 20, y = 30 } } },
         },
     },
@@ -43,7 +47,8 @@ local world = {
         {
             id = "turnout_1",
             owner = "turnout_1",
-            at = { x = 12, y = 22 },
+            origin = { x = 10, y = 20, z = 0 },
+            at = { x = 2, y = 2 },
             legs = {
                 throat = { edge = "wayman", toward = "start" },
                 through = { edge = "wayman", toward = "end" },
@@ -63,6 +68,18 @@ assertEqual(definition.edges.wayman[3].x, 12, "following block node")
 assertEqual(definition.switches[1].throat.edge, "wayman", "RR throat leg")
 assertEqual(definition.switches[1].place.x, 10, "static place x")
 assertEqual(definition.switches[1].place.y, 20, "static place y")
+
+-- Explicit interaction geometry supports valid entity overrides that no longer
+-- match one of the static turnout templates.
+world.switches[1].place = { x = 7, y = 8, z = 0 }
+world.availableNodes[1].nodes = {
+    { x = 20, y = 20, z = 0 },
+    { x = 21, y = 20, z = 0 },
+}
+local overriddenDefinition, overriddenReason = RRGraph.export(world)
+assert(overriddenDefinition, overriddenReason)
+assertEqual(overriddenDefinition.switches[1].place.x, 17, "explicit place x")
+assertEqual(overriddenDefinition.switches[1].place.y, 28, "explicit place y")
 
 local registeredRouteId, registeredRoute
 package.loaded["Railroader/RR_Routes"] = nil
@@ -88,7 +105,7 @@ end
 local registered, registerReason = RRGraph.register(world)
 assert(registered, registerReason)
 assertEqual(registeredRouteId, "wayman", "RR route id")
-assertEqual(registeredRoute.looped, false, "RR route is not looped")
+assertEqual(registeredRoute.looped, true, "RR route is looped")
 assertEqual(registeredRoute.nodes, registeredDefinition.edges.wayman,
     "RR route uses the exported wayman edge")
 assertEqual(registeredId, "wayman", "RR network id")

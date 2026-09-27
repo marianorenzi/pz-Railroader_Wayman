@@ -95,8 +95,23 @@ assertTrue(type(decoded.edges.wayman) == "table", "decoded edge blocks")
 local malformed, malformedReason = GraphData.worldDataFromJSON('{"revision":14,}')
 assertTrue(malformed == nil and malformedReason, "malformed JSON was accepted")
 
+local absolute = GraphData.getOrderedNodes({
+    {
+        origin = { x = 100, y = 200, z = 1 },
+        nodes = { { x = 2, y = 3 }, { x = 4, y = 5, z = 2 } },
+        invertNodes = true,
+    },
+})
+assertEqual(absolute[1].x, 104, "relative inverted node x")
+assertEqual(absolute[1].y, 205, "relative inverted node y")
+assertEqual(absolute[1].z, 3, "relative inverted node z")
+assertEqual(absolute[2].x, 102, "relative second node x")
+local legacy = GraphData.getAbsoluteNodes({ nodes = { { x = 7, y = 8, z = 0 } } })
+assertEqual(legacy[1].x, 7, "legacy absolute node compatibility")
+
 print("PASS: normalized atomic graph draft and remapped temporary edge id")
 print("PASS: preserved a valid user-provided edge id")
 print("PASS: rejected duplicate blocks and stale revisions")
 print("PASS: diagnosed incomplete switch legs and normalized false empty values")
 print("PASS: serialized and deserialized compact world-data JSON")
+print("PASS: converted relative blocks to absolute nodes with legacy compatibility")

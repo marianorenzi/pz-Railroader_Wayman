@@ -5,7 +5,7 @@ module Base
         entity ES_WaymanSymmetricalThreeWayTurnout
         {
             LuaWindowClass = ISEntityWindow,
-            DisplayName = Symmetrical three way turnout,
+            DisplayName = WaymanEntityName_SymmetricalThreeWayTurnout,
             Icon = SymmetricalThreeWayTurnoutIcon,
         }
     }
