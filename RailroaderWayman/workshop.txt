@@ -1,9 +1,14 @@
 version=1
 id=
 title=Railroader: Wayman
+
 description=[h2]Work in Progress[/h2]
 description=Adds buildable railroad track pieces to Project Zomboid.
 description=
 description=Currently under active development. Features, recipes, visuals, and save compatibility may change.
+description=
+description=[h2]Github repo[/h2]
+description=https://github.com/marianorenzi/pz-Railroader_Wayman
+
 tags=Build 42
 visibility=public

@@ -1,0 +1,8 @@
+{
+  "entity": "TrackSegmentDiag",
+  "iconFace": "W",
+  "faces": {
+    "N": { "width": 5, "height": 1, "layers": [{ "index": 0, "tiles": [["industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20"]] }] },
+    "W": { "width": 6, "height": 1, "layers": [{ "index": 0, "tiles": [["industry_railroad_01_12", "industry_railroad_01_13", "industry_railroad_01_10", "industry_railroad_01_11", "industry_railroad_01_8", "industry_railroad_01_9"]] }] }
+  }
+}

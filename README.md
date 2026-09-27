@@ -1,24 +1,83 @@
 # Railroader Wayman
 
-Build 42 companion mod for Railroader. The current prototype only declares
-constructible visual track entities; it does not yet store Wayman track data or
-integrate constructed pieces into Railroader's route graph.
+Work-in-progress Build 42 companion mod for Railroader. It currently provides
+constructible visual railway pieces built from custom tilesets. It does not yet
+store Wayman track data or integrate constructed pieces into Railroader's route
+graph.
 
-## Development layout
+## Repository layout
 
-Copy or link `mods/RailroaderWayman` directly into the Project Zomboid `mods`
-directory. The resulting path must be `Zomboid/mods/RailroaderWayman`, not
-`Zomboid/mods/pz-Railroader_Wayman/mods/RailroaderWayman`. Shared metadata is
-under `common` and the game-facing Build 42 files are under `42`.
+- `RailroaderWayman/`: Workshop item copied to the Project Zomboid Workshop
+  directory for testing.
+- `RailroaderWayman/Contents/mods/RailroaderWayman/common/`: shared mod
+  metadata.
+- `RailroaderWayman/Contents/mods/RailroaderWayman/42/`: Build 42 mod files.
+- `definitions/`: source matrices grouped into tracks, turns and
+  switches.
 
-## Prototype entities
+## Facing convention
 
-- `RailroaderWayman.BasicTrackSegment`: 3x1 or 1x3 straight track.
-- `RailroaderWayman.DiagonalTrackSegment`: provisional diagonal artwork. Its
-  supplied faces currently occupy 6x1 and 5x1 respectively and require visual
-  verification in game.
+`facing` describes the track entrance. Cardinal entrances use their own
+direction. Diagonal entrances use the next cardinal direction clockwise:
 
-The construction recipe is deliberately provisional: one hammer, three large
-planks, two metal bars and six railroad spikes. Moving and dismantling are not
-enabled because the vanilla railroad sprites do not carry the tile properties
-required by the moveables/scrapping system.
+- `NW` -> `N`
+- `NE` -> `E`
+- `SE` -> `S`
+- `SW` -> `W`
+
+For pieces with equivalent opposite orientations, `S` represents the `N/S`
+axis and `W` represents the `E/W` axis.
+
+## Track entities
+
+- `TrackSegment`: straight track, `S/W`.
+- `TrackSegmentDiag`: diagonal track, `S/W`.
+- `CrossingSegment`: cardinal crossing edge, `S/W`.
+- `CrossingSegmentDiag`: diagonal crossing segment, currently `N/E`.
+- `CrossingEdgeDiag`: diagonal crossing edge, `N/S` only. Suitable vanilla
+  sprites for `E/W` are not currently available.
+
+## Turn entities
+
+- `Left45DegTurn`: `N/E/S/W`.
+- `Right45DegTurn`: `N/E/S/W`.
+
+## Turnout entities
+
+- `SymmetricalThreeWayTurnout`: `N/S/W`.
+- `Right45DegTurnoutDiag`: `N/S/W`.
+- `WyeTurnout`: `S`.
+- `SymmetricalCompactThreeWayTurnout`: `E/W`.
+- `Right45DegTurnout`: `N/E/S/W`.
+- `Left45DegTurnout`: `N/E/S/W`.
+- `Left90DegTurnout`: `N`.
+- `Left45DegTurnoutDiag`: `N/W`.
+
+Missing orientations remain intentionally absent until their vanilla tile
+compositions have been captured and verified.
+
+## Selected icon faces
+
+| Entity | Face |
+|---|---|
+| `CrossingSegment` | `S` |
+| `CrossingSegmentDiag` | `N` |
+| `TrackSegment` | `S` |
+| `TrackSegmentDiag` | `W` |
+| `Left45DegTurn` | `N` |
+| `Right45DegTurn` | `W` |
+| `Left45DegTurnout` | `N` |
+| `Left45DegTurnoutDiag` | `N` |
+| `Left90DegTurnout` | `N` |
+| `Right45DegTurnout` | `E` |
+| `Right45DegTurnoutDiag` | `N` |
+| `SymmetricalCompactThreeWayTurnout` | `W` |
+| `SymmetricalThreeWayTurnout` | `S` |
+| `WyeTurnout` | `S` |
+
+## Current construction behavior
+
+Construction recipes and material costs are provisional. Pieces are visual
+entities only: they do not yet control trains, expose operational switches or
+participate in Railroader routing. Generated custom sprites avoid duplicate
+vanilla tile restrictions and persist normally with the world.

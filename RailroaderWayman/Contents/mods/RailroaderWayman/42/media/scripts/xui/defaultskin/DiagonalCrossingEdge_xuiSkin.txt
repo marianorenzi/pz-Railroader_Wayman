@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanDiagonalCrossingEdge
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = Diagonal crossing edge,
+            Icon = Build_FloorTileWood,
+        }
+    }
+}

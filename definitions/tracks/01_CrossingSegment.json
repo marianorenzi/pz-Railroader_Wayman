@@ -1,0 +1,32 @@
+{
+  "entity": "CrossingSegment",
+  "iconFace": "S",
+  "faces": {
+    "S": {
+      "width": 3,
+      "height": 1,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_03_0", null, "industry_railroad_03_0"]
+          ]
+        }
+      ]
+    },
+    "W": {
+      "width": 1,
+      "height": 3,
+      "layers": [
+        {
+          "index": 0,
+          "tiles": [
+            ["industry_railroad_03_3"],
+            [null],
+            ["industry_railroad_03_3"]
+          ]
+        }
+      ]
+    }
+  }
+}

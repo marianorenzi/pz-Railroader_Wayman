@@ -1,0 +1,60 @@
+module RailroaderWayman
+{
+    entity Left45DegTurnoutDiag
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanLeft45DegTurnoutDiag,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+            OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
+
+            face N
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_12_8 railroader_wayman_switches_12_9 railroader_wayman_switches_12_10 railroader_wayman_switches_12_11 railroader_wayman_switches_12_12 railroader_wayman_switches_12_13 false false,
+                    row = false railroader_wayman_switches_12_14 railroader_wayman_switches_12_15 railroader_wayman_switches_12_16 railroader_wayman_switches_12_17 railroader_wayman_switches_12_18 railroader_wayman_switches_12_19 railroader_wayman_switches_12_20,
+                    row = false false railroader_wayman_switches_12_21 railroader_wayman_switches_12_22 railroader_wayman_switches_12_23 railroader_wayman_switches_12_24 railroader_wayman_switches_12_25 false,
+                    row = false false false railroader_wayman_switches_12_26 railroader_wayman_switches_12_27 railroader_wayman_switches_12_28 railroader_wayman_switches_12_29 railroader_wayman_switches_12_30,
+                }
+            }
+
+            face W
+            {
+                layer
+                {
+                    row = false false false railroader_wayman_switches_12_31 railroader_wayman_switches_12_32 railroader_wayman_switches_12_33,
+                    row = false false railroader_wayman_switches_12_34 railroader_wayman_switches_12_35 railroader_wayman_switches_12_36 railroader_wayman_switches_12_37,
+                    row = false false false railroader_wayman_switches_12_38 railroader_wayman_switches_12_39 railroader_wayman_switches_12_40,
+                    row = false false railroader_wayman_switches_12_41 railroader_wayman_switches_12_42 railroader_wayman_switches_12_43 railroader_wayman_switches_12_44,
+                    row = false railroader_wayman_switches_12_45 railroader_wayman_switches_12_46 railroader_wayman_switches_12_47 railroader_wayman_switches_12_48 railroader_wayman_switches_12_49,
+                    row = railroader_wayman_switches_12_50 railroader_wayman_switches_12_51 railroader_wayman_switches_12_52 railroader_wayman_switches_12_53 railroader_wayman_switches_12_54 railroader_wayman_switches_12_55,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:2,
+            xpAward = Woodwork:10,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 3 [Base.LargePlank],
+                item 2 [Base.MetalBar],
+                item 6 [Base.RailroadSpike],
+            }
+        }
+    }
+}

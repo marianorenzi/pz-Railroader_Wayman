@@ -1,0 +1,8 @@
+{
+  "entity": "TrackSegment",
+  "iconFace": "S",
+  "faces": {
+    "S": { "width": 3, "height": 1, "layers": [{ "index": 0, "tiles": [["industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"]] }] },
+    "W": { "width": 1, "height": 3, "layers": [{ "index": 0, "tiles": [["industry_railroad_01_5"], ["industry_railroad_01_4"], ["industry_railroad_01_3"]] }] }
+  }
+}
