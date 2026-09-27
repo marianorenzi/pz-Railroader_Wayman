@@ -72,6 +72,7 @@ local function buildTurnoutRegistration(owner, geometry, origin)
             owner = owner,
             origin = GraphData.copy(origin),
             at = GraphData.copy(geometry.at),
+            place = GraphData.copy(geometry.switch),
             legs = {
                 throat = {},
                 through = {},
@@ -305,7 +306,7 @@ local function ownerExists(worldData, owner)
 end
 
 ---@class WaymanBlockPlacement
----@field blocks table
+---@field blocks table<string,{edgeId: string, index: integer, inverNodes: boolean }>
 ---@field legs table?
 
 --- Captures edge positions, inversions, and switch legs before geometry replacement.
@@ -431,6 +432,7 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
     end
     masterModData[OBJECT_DATA_KEY] = saved
     if isServer() then entity.master:transmitModData() end
+    log("saved entity modData for " .. tostring(owner) .. ": " .. tostring(saved))
     transmitWorldData()
     log("saved geometry for " .. tostring(owner) .. " from " .. tostring(entity.entityName)
         .. " facing " .. tostring(entity.facing)

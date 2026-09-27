@@ -69,6 +69,18 @@ assertEqual(definition.switches[1].throat.edge, "wayman", "RR throat leg")
 assertEqual(definition.switches[1].place.x, 10, "static place x")
 assertEqual(definition.switches[1].place.y, 20, "static place y")
 
+-- Explicit interaction geometry supports valid entity overrides that no longer
+-- match one of the static turnout templates.
+world.switches[1].place = { x = 7, y = 8, z = 0 }
+world.availableNodes[1].nodes = {
+    { x = 20, y = 20, z = 0 },
+    { x = 21, y = 20, z = 0 },
+}
+local overriddenDefinition, overriddenReason = RRGraph.export(world)
+assert(overriddenDefinition, overriddenReason)
+assertEqual(overriddenDefinition.switches[1].place.x, 17, "explicit place x")
+assertEqual(overriddenDefinition.switches[1].place.y, 28, "explicit place y")
+
 local registeredRouteId, registeredRoute
 package.loaded["Railroader/RR_Routes"] = nil
 package.preload["Railroader/RR_Routes"] = function()

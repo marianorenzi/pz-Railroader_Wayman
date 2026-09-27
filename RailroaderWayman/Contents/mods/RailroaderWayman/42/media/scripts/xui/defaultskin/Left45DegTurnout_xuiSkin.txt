@@ -5,7 +5,7 @@ module Base
         entity ES_WaymanLeft45DegTurnout
         {
             LuaWindowClass = ISEntityWindow,
-            DisplayName = Left 45 deg turnout,
+            DisplayName = WaymanEntityName_Left45DegTurnout,
             Icon = Left45DegTurnoutIcon,
         }
     }

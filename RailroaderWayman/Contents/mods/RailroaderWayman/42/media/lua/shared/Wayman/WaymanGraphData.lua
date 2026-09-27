@@ -5,9 +5,9 @@ RailroaderWaymanGraphData = RailroaderWaymanGraphData or {}
 local GraphData = RailroaderWaymanGraphData
 
 ---@class WaymanGraphData: table
----@field availableNodes table
----@field edges table
----@field switches table
+---@field availableNodes WaymanNodeBlock[]
+---@field edges table<string,WaymanNodeBlock[]>
+---@field switches WaymanTurnout[]
 ---@field revision integer
 ---@field nextEdgeId integer
 
@@ -21,7 +21,18 @@ local GraphData = RailroaderWaymanGraphData
 ---@field id string
 ---@field blockId string
 ---@field origin table
----@field nodes Array<WaymanNode>
+---@field nodes WaymanNode[]
+---@field invertNodes boolean?
+
+---@class WaymanTurnout: table
+---@field owner string
+---@field id string
+---@field turnoutId string
+---@field origin table
+---@field at WaymanNode
+---@field place WaymanNode?
+---@field through WaymanNode[]?
+---@field diverge WaymanNode[]?
 
 --- Deep-copies serializable graph data while preserving repeated table references.
 local function copy(value, seen)
@@ -305,7 +316,7 @@ function GraphData.getAbsoluteNodes(block)
 end
 
 --- Flattens ordered node blocks into absolute coordinates, applying inversion.
----@param blocks table
+---@param blocks WaymanNodeBlock[]
 function GraphData.getOrderedNodes(blocks)
     local nodes = {}
     for _, block in ipairs(blocks or {}) do

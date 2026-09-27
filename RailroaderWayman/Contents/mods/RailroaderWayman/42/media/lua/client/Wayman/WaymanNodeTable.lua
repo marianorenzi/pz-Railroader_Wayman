@@ -4,45 +4,50 @@ require "Wayman/WaymanLocalization"
 
 local ROW_H = 28
 
----@class WaymanNodeBlockHeader : ISPanel
+---@class WaymanNodeHeader : ISPanel
 ---@field title string
-local NodeBlockHeader = ISPanel:derive("WaymanNodeBlockHeader")
+local NodeHeader = ISPanel:derive("WaymanNodeHeader")
 
-function NodeBlockHeader:new(x, y, width, height, title)
+function NodeHeader:new(x, y, width, height, title)
     local o = ISPanel.new(self, x, y, width, height)
     o.title = title
     return o
 end
 
-function NodeBlockHeader:render()
+function NodeHeader:render()
+    -- title
     local w = getTextManager():MeasureStringX(UIFont.Small, self.title)
     local titleX = math.max(0, math.floor((self.width - w) / 2))
     self:drawText(self.title, titleX, 3, 1, 1, 1, 1, UIFont.Small)
-    self:drawText(WaymanLocalization.ui("BlockId"), 8, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
-    local t = WaymanLocalization.ui("NrNodes")
-    w = getTextManager():MeasureStringX(UIFont.Small, t)
-    self:drawText(t, self.width - w - 2, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+    -- x,y,z
+    local axisW = math.floor(self.width / 3)
+    local axisX = 8
+    self:drawText("X", axisX, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+    axisX = axisX + axisW
+    self:drawText("Y", axisX, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+    axisX = axisX + axisW
+    self:drawText("Z", axisX, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
 end
 
 ---------------------------------------------------------------------------------------------
----@class WaymanNodeBlockList : ISScrollingListBox
----@field block any
-local NodeBlockList = ISScrollingListBox:derive("WaymanNodeBlockList")
+---@class WaymanNodeList : ISScrollingListBox
+---@field block WaymanNodeBlock?
+local NodeList = ISScrollingListBox:derive("WaymanNodeList")
 
 --- Creates the selectable list used for node blocks.
-function NodeBlockList:new(x, y, width, height)
+function NodeList:new(x, y, width, height)
     local o = ISScrollingListBox.new(self, x, y, width, height)
     o.itemheight = ROW_H
     o.selected = -1
     o.block = nil
     o.drawBorder = false
     o.mouseOverHighlightColor = {r = 0, g = 0, b = 0, a = 0}
-    o.doDrawItem = NodeBlockList.doDrawItem
+    o.doDrawItem = NodeList.doDrawItem
     return o
 end
 
 --- Selects an node block.
-function NodeBlockList:onMouseDown(x, y)
+function NodeList:onMouseDown(x, y)
     ISScrollingListBox.onMouseDown(self, x, y)
     if self.selected == -1 then return end
 
@@ -52,103 +57,98 @@ function NodeBlockList:onMouseDown(x, y)
 
     if self.block ~= block then
         self.block = block 
-        self.parent.onBlockSelected(self.block, self.selected)
+        self.parent.onNodeSelected(self.block, self.selected)
     end
 
-    self.parent.onBlockClick(self.block)
+    self.parent.onNodeClick(self.block)
 end
 
 --- Sends a double-click event if it's a valid block.
-function NodeBlockList:onMouseDoubleClick(x, y)
+function NodeList:onMouseDoubleClick(x, y)
     ISScrollingListBox.onMouseDoubleClick(self, x, y)
     local row = self:rowAt(x, y)
     local item = row and self.items[row]
     local block = item and item.item or nil
     if not item or not block then return end
 
-    self.parent.onBlockDoubleClick(block)
+    self.parent.onNodeDoubleClick(block)
 end
 
 --- Draws one node block row with technical ID and node count.
-function NodeBlockList:doDrawItem(y, item, alt)
+function NodeList:doDrawItem(y, item, alt)
     if self.selected == item.index then
         self:drawRect(0, y, self.width, item.height, 0.25, 0.2, 0.55, 0.8)
     end
     self:drawRectBorder(0, y, self.width, item.height, 0.35, 0.7, 0.7, 0.7)
-    self:drawText(item.item.blockId, 8, y + 5, 1, 1, 1, 1, UIFont.Small)
-    self:drawText(tostring(#(item.item.nodes or {})), self.width - 25, y + 5, 0.75, 0.75, 0.75, 1, UIFont.Small)
+    -- x,y,z
+    local axisW = math.floor(self.width / 3)
+    local axisX = 8
+    self:drawText(tostring(item.item.x), axisX, y + 5, 1, 1, 1, 1, UIFont.Small)
+    axisX = axisX + axisW
+    self:drawText(tostring(item.item.y), axisX, y + 5, 1, 1, 1, 1, UIFont.Small)
+    axisX = axisX + axisW
+    self:drawText(tostring(item.item.z or 0), axisX, y + 5, 1, 1, 1, 1, UIFont.Small)
 
     return y + item.height
 end
 
 ---------------------------------------------------------------------------------------------
----@class WaymanNodeBlockTable : ISPanel
----@field header WaymanNodeBlockHeader
----@field data WaymanNodeBlockList
-NodeBlockTable = ISPanel:derive("WaymanNodeBlockTable")
-function NodeBlockTable:new(x, y, width, height, title)
+---@class WaymanNodeTable : ISPanel
+---@field header WaymanNodeHeader
+---@field data WaymanNodeList
+NodeTable = ISPanel:derive("WaymanNodeTable")
+function NodeTable:new(x, y, width, height, title)
     local o = ISPanel.new(self, x, y, width, height)
 
     -- events
-    o.onBlockSelected = function(block, index) end
-    o.onBlockClick = function(block) end
-    o.onBlockDoubleClick = function(block) end
+    o.onNodeSelected = function(block, index) end
+    o.onNodeClick = function(block) end
+    o.onNodeDoubleClick = function(block) end
     
-    o.header = NodeBlockHeader:new(0, 0, width, ROW_H*2, title)
+    o.header = NodeHeader:new(0, 0, width, ROW_H*2, title)
     o.header:initialise()
     o.header.background = true
     o:addChild(o.header)
 
-    o.data = NodeBlockList:new(0, ROW_H*2, width, height - ROW_H * 2)
+    o.data = NodeList:new(0, ROW_H*2, width, height - ROW_H * 2)
     o.data:initialise()
     o:addChild(o.data)
 
     return o
 end
 
-function NodeBlockTable:initialise()
+function NodeTable:initialise()
     ISPanel.initialise(self)
-    -- self.header:initialise()
-    -- self.data:initialise()
 end
 
-function NodeBlockTable:setWidth(width)
+function NodeTable:setWidth(width)
     ISPanel.setWidth(self, width)
     self.header:setWidth(width)
     self.data:setWidth(width)
 end
 
-function NodeBlockTable:setHeight(height)
+function NodeTable:setHeight(height)
     ISPanel.setHeight(self, height)
     -- self.header:setHeight(ROW_H)
     self.data:setHeight(math.max(0, height - ROW_H * 2))
 end
 
--- function NodeBlockTable:setX(x)
---     ISPanel.setX(self, x)
---     self.header:setX(x)
---     self.data:setX(x)
--- end
-
--- function NodeBlockTable:setY(y)
---     ISPanel.setY(self, y)
---     self.header:setY(y)
---     self.data:setY(y + ROW_H)
--- end
-
-function NodeBlockTable:getSelectedBlock()
+function NodeTable:getSelectedNode()
     return self.data.block, self.data.selected
 end
 
-function NodeBlockTable:getBlocks()
+function NodeTable:getNodes()
     return self.data.items
 end
 
-function NodeBlockTable:clear()
+function NodeTable:clear()
     self.data:clear()
     self.data.block = nil
 end
 
-function NodeBlockTable:addItem(name, item, tooltip)
+--- 
+--- @param name string
+--- @param item WaymanNode
+function NodeTable:addItem(name, item, tooltip)
     self.data:addItem(name, item, tooltip)
 end

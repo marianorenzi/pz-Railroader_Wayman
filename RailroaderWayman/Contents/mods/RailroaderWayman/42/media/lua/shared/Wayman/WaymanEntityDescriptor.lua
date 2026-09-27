@@ -71,4 +71,15 @@ function Descriptor.getInstance(object, requestedFacing)
     return description
 end
 
+--- Fetches the instance mod data
+--- @param instance WaymanEntityInstance
+--- @param key string
+--- @return any
+--- @return boolean isDefault
+function Descriptor.instanceDataValueOrDefault(instance, key)
+    local override = instance.data[key]
+    if override ~= nil then return override, false end
+    return instance.defaults[key], true
+end
+
 return Descriptor

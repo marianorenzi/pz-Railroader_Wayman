@@ -85,6 +85,7 @@ local function resolveStaticPlace(worldData, switch)
 end
 
 --- Converts authoritative Wayman data into one RR TrackGraph definition.
+--- @param worldData WaymanGraphData
 function RRGraph.export(worldData)
     if type(worldData) ~= "table" then return nil, "world data must be a table" end
     local definition = { edges = {}, switches = {} }
@@ -110,7 +111,11 @@ function RRGraph.export(worldData)
         if configured then
             local exportSwitch = GraphData.copy(switch)
             exportSwitch.at = absoluteAt
-            local place, placeReason = resolveStaticPlace(worldData, exportSwitch)
+            local place = switch.place and GraphData.getAbsoluteNode(switch.origin, switch.place)
+            local placeReason
+            if not place then
+                place, placeReason = resolveStaticPlace(worldData, exportSwitch)
+            end
             if not place then return nil, placeReason end
             table.insert(definition.switches, {
                 id = switch.id,

@@ -1,7 +1,14 @@
 {
     "UI_optionscreen_binding_RailroaderWayman": "Railroader: Wayman",
     "UI_optionscreen_binding_wayman_toggle_graph_editor": "Toggle graph editor",
-    "UI_Wayman_WindowTitle": "Wayman — Graph",
+    "UI_Wayman_WindowTitle": "Wayman — Graph Editor",
+    "UI_Wayman_NodeEditorTitle": "Wayman — Entity Nodes Editor",
+    "UI_Wayman_EntityIdPlaceholder": "Unregistered entity",
+    "UI_Wayman_NodeBlocks": "Entity node blocks",
+    "UI_Wayman_Nodes": "Nodes",
+    "UI_Wayman_Add": "Add",
+    "UI_Wayman_Apply": "Apply",
+    "UI_Wayman_Default": "Default",
     "UI_Wayman_Edges": "Edges",
     "UI_Wayman_Switches": "Switches",
     "UI_Wayman_EdgeBlocks": "Edge node blocks",
@@ -52,6 +59,7 @@
     "UI_Wayman_MapEdge": "Edge: %1",
     "UI_Wayman_MapButtonTooltip": "Edit Wayman graph",
     "UI_Wayman_ContextShowNodes": "Show nodes",
+    "UI_Wayman_ContextEditNodes": "Edit entity nodes",
     "UI_Wayman_ContextUpdateEntity": "Update rail entity",
     "UI_Wayman_UnknownServerError": "Unknown server error"
 }

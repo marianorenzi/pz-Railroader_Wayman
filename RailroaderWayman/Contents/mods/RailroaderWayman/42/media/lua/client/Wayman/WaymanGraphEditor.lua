@@ -4,7 +4,7 @@
 require "Wayman/WaymanGraphData"
 require "Wayman/WaymanGraphDisplay"
 require "Wayman/WaymanLocalization"
-require "Wayman/WaymanGraphEditorNodeBlockTable"
+require "Wayman/WaymanNodeBlockTable"
 require "ISUI/ISButton"
 require "ISUI/ISCollapsableWindowJoypad"
 require "ISUI/ISComboBox"
@@ -24,6 +24,20 @@ local SPACING = 10
 local BUTTON_H = 25
 local ROW_H = 28
 local DISPLAY_GAP = 16
+
+--- Restores saved session bounds while keeping the window on the current screen.
+local function windowBounds(state, defaultWidth, defaultHeight)
+    state = state or {}
+    local screenWidth = getCore():getScreenWidth()
+    local screenHeight = getCore():getScreenHeight()
+    local width = math.min(state.width or defaultWidth, screenWidth)
+    local height = math.min(state.height or defaultHeight, screenHeight)
+    local x = state.x or math.floor((screenWidth - width) / 2)
+    local y = state.y or math.floor((screenHeight - height) / 2)
+    x = math.max(0, math.min(x, screenWidth - width))
+    y = math.max(0, math.min(y, screenHeight - height))
+    return x, y, width, height
+end
 
 --- Returns deterministic alphabetical keys for edge selectors.
 local function sortedKeys(values)
@@ -672,11 +686,23 @@ end
 
 --- Hides the editor while retaining its draft for the next open action.
 function GraphEditor:close()
+    self:saveWindowState()
     self:setVisible(false)
+end
+
+--- Remembers this editor's bounds for the remainder of the game session.
+function GraphEditor:saveWindowState()
+    Controller.windowState = {
+        x = self.x,
+        y = self.y,
+        width = self.width,
+        height = self.height,
+    }
 end
 
 --- Explicitly discards the draft and destroys the singleton editor instance.
 function GraphEditor:discardAndClose()
+    self:saveWindowState()
     self:setVisible(false)
     self:removeFromUIManager()
     if Controller.instance == self then Controller.instance = nil end
@@ -734,9 +760,7 @@ function Controller.open(data)
         Controller.instance:bringToTop()
         return Controller.instance
     end
-    local width, height = 700, 560
-    local x = math.max(0, (getCore():getScreenWidth() - width) / 2)
-    local y = math.max(0, (getCore():getScreenHeight() - height) / 2)
+    local x, y, width, height = windowBounds(Controller.windowState, 700, 560)
     local editor = GraphEditor:new(x, y, width, height, data)
     editor:initialise()
     editor:addToUIManager()
