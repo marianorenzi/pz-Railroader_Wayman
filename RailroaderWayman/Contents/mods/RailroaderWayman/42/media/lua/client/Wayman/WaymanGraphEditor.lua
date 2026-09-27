@@ -171,6 +171,19 @@ local function addButton(parent, x, y, width, text, target, callback)
     return button
 end
 
+--- Selects a row through the NodeBlockTable's inner list and notifies its owner.
+local function selectBlockAt(blockTable, index)
+    local item = index and blockTable.data.items[index] or nil
+    blockTable.data.selected = item and index or -1
+    blockTable.data.block = item and item.item or nil
+    blockTable.onBlockSelected(blockTable.data.block, blockTable.data.selected)
+end
+
+--- Clears a NodeBlockTable selection and synchronizes its action controls.
+local function clearBlockSelection(blockTable)
+    selectBlockAt(blockTable, nil)
+end
+
 --- Creates a transparent content panel for an editor tab.
 local function newPanel(width, height)
     local panel = ISPanel:new(0, 0, width, height)
@@ -388,16 +401,12 @@ end
 
 --- Returns the selected mutable draft node block and its index for the selected edge.
 function GraphEditor:getSelectedEdgeBlock()
-    -- return self.edgeList:getSelectedBlock()
-
-    local index = self.edgeList.selected
-    local item = index and self.edgeList.items[index]
-    if not item then return nil, nil end
+    local block, index = self.edgeList:getSelectedBlock()
+    if not block or not index or index < 1 then return nil, nil end
 
     local blocks = self:getSelectedEdgeBlocks()
-    local block = item.item
 
-    -- Verifica que el item todavía pertenezca al edge seleccionado.
+    -- Verifies that the item still belongs to the selected edge.
     if blocks[index] ~= block then return nil, nil end
 
     return block, index
@@ -507,14 +516,14 @@ end
 
 --- Appends the selected available block to the chosen target edge.
 function GraphEditor:onAssign()
-    local item = self.availableList.items[self.availableList.selected]
+    local block = self.availableList:getSelectedBlock()
     local edgeId = self:getSelectedEdgeId()
     local blocks = self.draft.edges[edgeId]
-    if not item or not edgeId or not blocks then return end
+    if not block or not edgeId or not blocks then return end
 
     local availableIndex
-    for index, block in ipairs(self.draft.availableNodes) do
-        if block == item.item then
+    for index, availableBlock in ipairs(self.draft.availableNodes) do
+        if availableBlock == block then
             availableIndex = index
             break
         end
@@ -523,11 +532,10 @@ function GraphEditor:onAssign()
     if not availableIndex then return end
 
     table.remove(self.draft.availableNodes, availableIndex)
-    table.insert(blocks, item.item)
+    table.insert(blocks, block)
     
     Controller.selectedAvailableBlockId = nil
-    self.availableList.selected = 0
-    self.availableList.block = nil
+    clearBlockSelection(self.availableList)
     self:refreshEdgeList()
     self:refreshAvailable()
     self:setDirty()
@@ -543,8 +551,7 @@ function GraphEditor:onUnassign()
     block.invertNodes = nil
     table.insert(self.draft.availableNodes, block)
 
-    self.edgeList.selected = 0
-    self.edgeList.block = nil
+    clearBlockSelection(self.edgeList)
     self:refreshEdgeList()
     self:refreshAvailable()
     self:setDirty()
@@ -560,8 +567,7 @@ function GraphEditor:onMoveUp()
     blocks[index], blocks[index - 1] = blocks[index - 1], blocks[index]
 
     self:refreshEdgeList()
-    self.edgeList.selected = index - 1
-    self.edgeList.block = blocks[index - 1]
+    selectBlockAt(self.edgeList, index - 1)
     self:setDirty()
 end
 
@@ -575,8 +581,7 @@ function GraphEditor:onMoveDown()
     blocks[index], blocks[index + 1] = blocks[index + 1], blocks[index]
 
     self:refreshEdgeList()
-    self.edgeList.selected = index + 1
-    self.edgeList.block = blocks[index + 1]
+    selectBlockAt(self.edgeList, index + 1)
     self:setDirty()
 end
 

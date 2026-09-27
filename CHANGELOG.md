@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Fixed the Graph Editor's Move Up and Move Down actions not reordering the selected node block.
+
 ## 0.1.0
 
 Changes since last release.
