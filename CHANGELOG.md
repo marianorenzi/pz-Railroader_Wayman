@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+### New
+
+- Added explicit external-edge references for turnout legs, allowing them to target Railroader edges not managed by Wayman.
+
 ## 0.2.0
 
 ### New
