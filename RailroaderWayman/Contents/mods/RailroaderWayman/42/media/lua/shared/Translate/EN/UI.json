@@ -19,6 +19,8 @@
     "UI_Wayman_EdgeBlocks": "Edge node blocks",
     "UI_Wayman_AvailableBlocks": "Available node blocks",
     "UI_Wayman_Unassigned": "— Unassigned —",
+    "UI_Wayman_External": "— External —",
+    "UI_Wayman_ExternalEdgeId": "External edge ID",
     "UI_Wayman_NodeCount": "%1 nodes",
     "UI_Wayman_NrNodes": "# Nodes",
     "UI_Wayman_BlockId": "Block ID",

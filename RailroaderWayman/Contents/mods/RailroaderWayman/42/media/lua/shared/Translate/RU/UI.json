@@ -19,6 +19,8 @@
     "UI_Wayman_EdgeBlocks": "Узлы рёбер",
     "UI_Wayman_AvailableBlocks": "Доступные узлы",
     "UI_Wayman_Unassigned": "— Не назначено —",
+    "UI_Wayman_External": "— Внешнее —",
+    "UI_Wayman_ExternalEdgeId": "ID внешнего ребра",
     "UI_Wayman_NodeCount": "Узлов: %1",
     "UI_Wayman_NrNodes": "# узлов",
     "UI_Wayman_BlockId": "ID блока",

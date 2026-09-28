@@ -24,6 +24,7 @@ local SPACING = 10
 local BUTTON_H = 25
 local ROW_H = 28
 local DISPLAY_GAP = 16
+local EXTERNAL_EDGE = "__wayman_external_edge__"
 
 --- Restores saved session bounds while keeping the window on the current screen.
 local function windowBounds(state, defaultWidth, defaultHeight)
@@ -67,15 +68,16 @@ local function fillEdgeCombo(combo, edges, includeEmpty, selected)
     if selected ~= nil then combo:setSelectedData(selected or false) end
 end
 
---- Populates a switch-leg edge selector, optionally exposing RR's external main edge.
-local function fillSwitchEdgeCombo(combo, edges, selected, includeMain)
+--- Populates a switch-leg selector with Wayman, main, and custom external edges.
+local function fillSwitchEdgeCombo(combo, edges, selected, includeMain, external)
     clearCombo(combo)
     combo:addOptionWithData(WaymanLocalization.ui("Unassigned"), false)
     if includeMain and not edges.main then combo:addOptionWithData("main", "main") end
     for _, edgeId in ipairs(sortedKeys(edges)) do
         combo:addOptionWithData(edgeId, edgeId)
     end
-    combo:setSelectedData(selected or false)
+    combo:addOptionWithData(WaymanLocalization.ui("External"), EXTERNAL_EDGE)
+    combo:setSelectedData(external and EXTERNAL_EDGE or selected or false)
 end
 
 --- Populates the origin edge selector with an empty option, main, and draft edges.
@@ -319,16 +321,29 @@ function GraphEditor:createChildren()
             1, 1, 1, 1, UIFont.Small, true)
         label:initialise()
         self.switchesPanel:addChild(label)
-        local edgeCombo = ISComboBox:new(110, y, 280, BUTTON_H, self, self.onSwitchLegChanged, legName)
+        local edgeCombo = ISComboBox:new(110, y, 170, BUTTON_H, self, self.onSwitchLegChanged, legName)
         edgeCombo:initialise()
         self.switchesPanel:addChild(edgeCombo)
-        local towardCombo = ISComboBox:new(400, y, 150, BUTTON_H, self, self.onSwitchLegChanged, legName)
+        local externalEntry = ISTextEntryBox:new("", 290, y, 170, BUTTON_H)
+        externalEntry:initialise()
+        externalEntry:instantiate()
+        externalEntry:setPlaceholderText(WaymanLocalization.ui("ExternalEdgeId"))
+        externalEntry:setEditable(false)
+        externalEntry.target = self
+        externalEntry.legName = legName
+        externalEntry.onTextChangeFunction = self.onSwitchLegChanged
+        self.switchesPanel:addChild(externalEntry)
+        local towardCombo = ISComboBox:new(470, y, 130, BUTTON_H, self, self.onSwitchLegChanged, legName)
         towardCombo:initialise()
         towardCombo:addOptionWithData("—", false)
         towardCombo:addOptionWithData(WaymanLocalization.ui("TowardStart"), "start")
         towardCombo:addOptionWithData(WaymanLocalization.ui("TowardEnd"), "end")
         self.switchesPanel:addChild(towardCombo)
-        self.legControls[legName] = { edge = edgeCombo, toward = towardCombo }
+        self.legControls[legName] = {
+            edge = edgeCombo,
+            external = externalEntry,
+            toward = towardCombo,
+        }
     end
 
     -- Origin panel
@@ -513,7 +528,8 @@ function GraphEditor:refreshSwitchEdgeCombos()
     local includeMain = self.draft.origin and self.draft.origin.edge == "main"
     for _, controls in pairs(self.legControls or {}) do
         local prior = comboData(controls.edge)
-        fillSwitchEdgeCombo(controls.edge, self.draft.edges, prior, includeMain)
+        local external = prior == EXTERNAL_EDGE
+        fillSwitchEdgeCombo(controls.edge, self.draft.edges, prior, includeMain, external)
     end
 end
 
@@ -729,7 +745,9 @@ function GraphEditor:onSwitchSelected(_combo)
     for legName, controls in pairs(self.legControls) do
         local leg = switch and switch.legs[legName] or {}
         fillSwitchEdgeCombo(controls.edge, self.draft.edges,
-            leg.edge or false, includeMain)
+            leg.edge or false, includeMain, leg.external == true)
+        controls.external:setText(leg.external and leg.edge or "")
+        controls.external:setEditable(switch ~= nil and leg.external == true)
         controls.toward:setSelectedData(leg.toward or false)
     end
     self.updatingSwitch = false
@@ -738,10 +756,19 @@ end
 --- Stores one switch leg while enforcing paired edge/toward values.
 function GraphEditor:onSwitchLegChanged(_combo, legName)
     if self.updatingSwitch then return end
+    legName = legName or (_combo and _combo.legName)
+    if not legName then return end
     local switch = self:getSelectedSwitch()
     local controls = self.legControls[legName]
     if not switch or not controls then return end
-    local edge = comboData(controls.edge)
+    local selectedEdge = comboData(controls.edge)
+    local external = selectedEdge == EXTERNAL_EDGE
+    controls.external:setEditable(external)
+    local edge = selectedEdge
+    if external then
+        edge = controls.external:getText():match("^%s*(.-)%s*$")
+        if edge == "" then edge = nil end
+    end
     local toward = comboData(controls.toward)
     if edge and not toward then
         toward = "start"
@@ -754,7 +781,11 @@ function GraphEditor:onSwitchLegChanged(_combo, legName)
         controls.toward:setSelectedData(false)
         self.updatingSwitch = false
     end
-    switch.legs[legName] = edge and toward and { edge = edge, toward = toward } or {}
+    switch.legs[legName] = edge and toward and {
+        edge = edge,
+        toward = toward,
+        external = external or nil,
+    } or {}
     self:setDirty()
 end
 
@@ -767,7 +798,9 @@ function GraphEditor:clearUnavailableMainLegs()
     for _, switch in ipairs(self.draft.switches) do
         for _, legName in ipairs({ "throat", "through", "diverge" }) do
             local leg = switch.legs and switch.legs[legName]
-            if leg and leg.edge == "main" then switch.legs[legName] = {} end
+            if leg and leg.edge == "main" and not leg.external then
+                switch.legs[legName] = {}
+            end
         end
     end
 end

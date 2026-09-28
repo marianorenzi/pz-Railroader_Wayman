@@ -474,19 +474,30 @@ function GraphData.validateDraft(worldData, draft)
         normalized.legs = {}
         for _, legName in ipairs({ "throat", "through", "diverge" }) do
             local leg = requested.legs and requested.legs[legName] or {}
-            local edge = leg.edge and (edgeIdMap[leg.edge] or leg.edge) or nil
+            local external = leg.external == true
+            local edge = leg.edge
+            if edge and not external then edge = edgeIdMap[edge] or edge end
             local toward = leg.toward or nil
+            if edge ~= nil and (type(edge) ~= "string" or edge == "") then
+                return nil, "switch " .. tostring(requested.id) .. " leg " .. legName
+                    .. " has an invalid edge id"
+            end
             if (edge == nil) ~= (toward == nil) then
                 return nil, "switch " .. tostring(requested.id) .. " leg " .. legName
                     .. " must define edge and toward together"
             end
-            if edge and not result.edges[edge] and not (allowMainEdge and edge == "main") then
+            if edge and not external and not result.edges[edge]
+                and not (allowMainEdge and edge == "main") then
                 return nil, "switch references missing edge " .. edge
             end
             if toward and toward ~= "start" and toward ~= "end" then
                 return nil, "invalid switch toward " .. tostring(toward)
             end
-            normalized.legs[legName] = edge and { edge = edge, toward = toward } or {}
+            normalized.legs[legName] = edge and {
+                edge = edge,
+                toward = toward,
+                external = external or nil,
+            } or {}
         end
         table.insert(result.switches, normalized)
     end
