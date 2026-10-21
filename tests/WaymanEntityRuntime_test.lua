@@ -25,13 +25,18 @@ Events = {
     OnTick = {
         Add = function(handler) table.insert(tickHandlers, handler) end,
     },
-    OnInitGlobalModData = { Add = function(handler) Events.initGlobalModDataHandler = handler end },
+    OnRailroaderRegisterTrack = { Add = function(handler) Events.registerTrackHandler = handler end },
     OnObjectAboutToBeRemoved = { Add = function(handler) Events.removeHandler = handler end },
     OnClientCommand = { Add = function(handler) Events.commandHandler = handler end },
 }
 
 function isClient() return false end
 function isServer() return true end
+
+RR = {
+    API = { edges = function() return {} end,
+        registerTrack = function() return true end, unregisterTrack = function() return nil, "unknown" end },
+}
 
 local originalPrint = print
 function print(message)
@@ -166,7 +171,7 @@ RailroaderWaymanRRGraph.register = function(data)
     return true
 end
 result.edges.wayman = { result.availableNodes[1], result.availableNodes[2] }
-Events.initGlobalModDataHandler()
+Events.registerTrackHandler()
 assertTrue(registeredOnLoad == result, "saved graph was not registered during world-data load")
 result.edges.wayman = nil
 

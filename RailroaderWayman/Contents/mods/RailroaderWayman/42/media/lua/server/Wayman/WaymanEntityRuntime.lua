@@ -112,8 +112,8 @@ end
 
 --- Rebuilds RR's runtime-only route and graph registries from saved Wayman data.
 local function registerPersistedRRGraph()
+    if isClient() then return end
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
-    if type(worldData.edges) ~= "table" or type(worldData.edges.wayman) ~= "table" then return end
     local registered, reason = RRGraph.register(worldData)
     if not registered then
         log("saved RR route/graph registration failed: " .. tostring(reason))
@@ -154,7 +154,7 @@ local function removeOwner(owner, suppressNotification, preserveEmptyEdges, targ
         else
             for _, legName in ipairs({ "throat", "through", "diverge" }) do
                 local leg = switch.legs and switch.legs[legName]
-                if leg and removedEdges[leg.edge] then switch.legs[legName] = {} end
+                if leg and not leg.external and removedEdges[leg.edge] then switch.legs[legName] = {} end
             end
             table.insert(switches, switch)
         end
@@ -212,8 +212,7 @@ local function validateGraphState(worldData)
         end
     end
 
-    local allowMainEdge = type(worldData.origin) == "table"
-        and worldData.origin.edge == "main"
+    local externalEdges = RRGraph.externalEdges()
     local seenSwitches = {}
     for _, switch in ipairs(worldData.switches or {}) do
         if type(switch) ~= "table" or type(switch.id) ~= "string" or seenSwitches[switch.id]
@@ -229,10 +228,9 @@ local function validateGraphState(worldData)
             if (leg.edge == nil) ~= (leg.toward == nil) then
                 return false, "incomplete " .. legName .. " leg on " .. switch.id
             end
-            if leg.edge and not worldData.edges[leg.edge]
-                and leg.external ~= true
-                and not (allowMainEdge and leg.edge == "main") then
-                return false, "switch " .. switch.id .. " references missing edge " .. leg.edge
+            if leg.edge and (leg.external == true or not worldData.edges[leg.edge])
+                and not (externalEdges and externalEdges[leg.edge]) then
+                return false, "switch " .. switch.id .. " references unknown external edge " .. leg.edge
             end
             if leg.toward and leg.toward ~= "start" and leg.toward ~= "end" then
                 return false, "invalid toward on " .. switch.id
@@ -308,6 +306,24 @@ local function ownerExists(worldData, owner)
     for _, switch in ipairs(worldData.switches) do if switch.owner == owner then return true end end
     for _, blocks in pairs(worldData.edges) do
         for _, block in ipairs(blocks) do if block.owner == owner then return true end end
+    end
+    return false
+end
+
+--- Available blocks and incomplete switches do not change RR's operative graph.
+local function ownerAffectsTrack(worldData, owner)
+    for _, blocks in pairs(worldData.edges) do
+        for _, block in ipairs(blocks) do if block.owner == owner then return true end end
+    end
+    for _, switch in ipairs(worldData.switches) do
+        if switch.owner == owner then
+            local complete = true
+            for _, name in ipairs({ "throat", "through", "diverge" }) do
+                local leg = switch.legs and switch.legs[name]
+                if not leg or not leg.edge or not leg.toward then complete = false end
+            end
+            if complete then return true end
+        end
     end
     return false
 end
@@ -418,6 +434,14 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
         return false, validationReason
     end
 
+    if ownerAffectsTrack(worldData, owner) or ownerAffectsTrack(staged, owner) then
+        local accepted, rrReason = RRGraph.register(staged)
+        if not accepted then
+            log("geometry update rejected by Railroader: " .. tostring(rrReason))
+            return false, rrReason
+        end
+    end
+
     -- Commit the staged collections only after the replacement is complete.
     worldData.availableNodes = staged.availableNodes
     worldData.edges = staged.edges
@@ -478,38 +502,47 @@ function RailroaderWaymanEntityRuntime.OnRemove(object)
         if EntityDescriptor.getMaster(pending[index].object) == master then table.remove(pending, index) end
     end
     local data = master:getModData()[OBJECT_DATA_KEY]
-    if data and data.id then removeOwner(data.id) end
+    if not data or not data.id then return end
+    local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
+    local staged = GraphData.copy(worldData)
+    if not removeOwner(data.id, true, false, staged) then return end
+    staged.revision = worldData.revision + 1
+    if ownerAffectsTrack(worldData, data.id) then
+        local accepted, reason = RRGraph.register(staged)
+        if not accepted then
+            log("entity removal could not update Railroader; keeping last graph: " .. tostring(reason))
+            return
+        end
+    end
+    worldData.availableNodes = staged.availableNodes
+    worldData.edges = staged.edges
+    worldData.switches = staged.switches
+    worldData.revision = staged.revision
+    transmitWorldData()
 end
 
 --- Applies a validated graph-editor transaction to authoritative global state.
 function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision)
+    if isClient() then return false, "server authority required" end
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
     if type(draft) == "table" then draft.revision = baseRevision end
-    local normalized, reason = GraphData.validateDraft(worldData, draft)
+    local normalized, reason = GraphData.validateDraft(worldData, draft, RRGraph.externalEdges())
     if not normalized then
         log("graph update rejected: " .. tostring(reason))
         return false, reason
     end
-    if reason then
-        log("graph origin normalized: " .. tostring(reason))
-    end
-    local rrDefinition, rrReason = RRGraph.export(normalized)
-    if not rrDefinition then
-        log("graph update rejected by RR export: " .. tostring(rrReason))
+    local accepted, rrReason = RRGraph.register(normalized)
+    if not accepted then
+        log("graph update rejected by Railroader: " .. tostring(rrReason))
         return false, rrReason
     end
     worldData.availableNodes = normalized.availableNodes
     worldData.edges = normalized.edges
     worldData.switches = normalized.switches
-    worldData.origin = normalized.origin
+    worldData.origin = nil
     worldData.nextEdgeId = normalized.nextEdgeId
     worldData.revision = normalized.revision
     transmitWorldData()
-    local registered, registerReason = RRGraph.register(worldData)
-    if not registered then
-        log("RR graph registration failed at revision " .. tostring(worldData.revision)
-            .. ": " .. tostring(registerReason))
-    end
     log("graph update accepted at revision " .. tostring(worldData.revision))
     return true
 end
@@ -609,7 +642,11 @@ function RailroaderWaymanEntityRuntime.OnCreate(params)
 end
 
 Events.OnTick.Add(initializePending)
-Events.OnInitGlobalModData.Add(registerPersistedRRGraph)
+if Events.OnRailroaderRegisterTrack then
+    Events.OnRailroaderRegisterTrack.Add(registerPersistedRRGraph)
+else
+    log("OnRailroaderRegisterTrack is unavailable; this Railroader build cannot restore Wayman track")
+end
 Events.OnObjectAboutToBeRemoved.Add(RailroaderWaymanEntityRuntime.OnRemove)
 Events.OnClientCommand.Add(onClientCommand)
 

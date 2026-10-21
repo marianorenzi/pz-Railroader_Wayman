@@ -109,8 +109,7 @@ assertEqual(#rrRegistrations, 0, "data without wayman edge must not register RR"
 
 data.edges.wayman = data.edges.edge_1
 handlers.OnReceiveGlobalModData[1]("RailroaderWayman_World", data)
-assertEqual(#rrRegistrations, 1, "persisted wayman graph registration")
-assertEqual(rrRegistrations[1], data, "registered authoritative graph snapshot")
+assertEqual(#rrRegistrations, 0, "client must never register the Railroader graph")
 data.edges.wayman = nil
 
 local mouseX, mouseY = 1000, 1000
