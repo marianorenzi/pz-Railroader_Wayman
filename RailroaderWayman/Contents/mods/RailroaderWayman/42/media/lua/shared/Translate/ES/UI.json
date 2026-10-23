@@ -67,6 +67,15 @@
     "UI_Wayman_MapButtonTooltip": "Editar grafo de Wayman",
     "UI_Wayman_ContextShowNodes": "Mostrar nodos",
     "UI_Wayman_ContextEditNodes": "Editar nodos de entidad",
+    "UI_Wayman_Debug": "Debug",
+    "UI_Wayman_DebugEntityCapture": "Registrar nombres y orientaciones de entidades",
     "UI_Wayman_ContextUpdateEntity": "Actualizar entidad ferroviaria",
-    "UI_Wayman_UnknownServerError": "Error desconocido del servidor"
+    "UI_Wayman_UnknownServerError": "Error desconocido del servidor",
+    "UI_Wayman_StatusLocalSaveFailed": "No se pudo guardar el draft local: %1",
+    "UI_Wayman_StatusMergeConflicts": "%1 conflictos. Accept para revisar; Reload para usar servidor.",
+    "UI_Wayman_StatusRRPending": "Mundo actualizado; publicación en RR pendiente: %1",
+    "UI_Wayman_StatusGeometryStaged": "Geometría en el draft local. Accept en el editor de grafo publica el conjunto.",
+    "UI_Wayman_StageGeometry": "Al draft",
+    "UI_Wayman_StatusDraftSaved": "Draft guardado localmente; falta publicar",
+    "UI_Wayman_MergeReview": "Conflictos con el mundo actual:\\n%1\\n\\nSí: conservar las decisiones locales con la geometría canónica actual. Revisar el draft y pulsar Accept otra vez para publicar.\\nNo: conservar las versiones sin publicar. Reload descarta el trabajo local y usa el servidor."
 }

@@ -23,7 +23,7 @@
     },
     "E": {
       "width": 5, "height": 4,
-      "nodes": [{"x": 6, "y": 3, "z": 0}],
+      "nodes": [{"x": 4, "y": 3, "z": 0}],
       "layers": [{ "index": 0, "tiles": [
         ["industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_02_17", "industry_railroad_02_20", "industry_railroad_02_23"],
         [null, "industry_railroad_02_16", "industry_railroad_02_19", "industry_railroad_02_22", "industry_railroad_02_25"],

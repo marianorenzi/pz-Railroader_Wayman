@@ -33,6 +33,10 @@ ModData = {
 }
 
 function isClient() return true end
+function getText(key, value)
+    if key == "UI_Wayman_MapEdge" then return "Edge: " .. value end
+    return key
+end
 
 ISWorldMap = {
     createChildren = function() end,
@@ -43,6 +47,7 @@ ISWorldMap.__index = ISWorldMap
 RailroaderWaymanGraphEditor = {
     onWorldData = function() end,
     onRejected = function() end,
+    onResult = function(args) RailroaderWaymanGraphEditor.result=args end,
     getOverlayState = function(data)
         return {
             data = data,
@@ -166,6 +171,17 @@ assertEqual(map.hoverText, "Edge: edge_1", "edge hover identifier")
 handlers.OnReceiveGlobalModData[1]("RailroaderWayman_World", false)
 handlers.OnConnected[1]()
 assertEqual(#requests, 2, "retry after false response")
+
+-- A correlated result may arrive before the ModData broadcast.
+local acknowledged = RailroaderWaymanGraphData.copy(data)
+acknowledged.revision = 2
+handlers.OnServerCommand[1]("RailroaderWayman","graphResult",{
+    requestId="own:1",ok=true,worldData=acknowledged,
+})
+assertEqual(registry.RailroaderWayman_World.revision, 2, "ack did not refresh authoritative cache")
+assertEqual(RailroaderWaymanGraphEditor.result.requestId, "own:1", "ack lost its request identity")
+handlers.OnReceiveGlobalModData[1]("RailroaderWayman_World",data)
+assertEqual(registry.RailroaderWayman_World.revision, 2, "late broadcast rolled revision backwards")
 
 print("PASS: requested and registered global modData")
 print("PASS: rendered 2 visible availableNodes points and culled 1 off-map point")

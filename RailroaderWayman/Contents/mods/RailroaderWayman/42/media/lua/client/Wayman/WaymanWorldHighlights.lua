@@ -28,6 +28,10 @@ local HighlightUI = ISPanel:derive("RailroaderWaymanWorldHighlightUI")
 
 --- Draws every active highlight group before the diagnostic UI renders.
 function HighlightUI:prerender()
+    -- The fullscreen map disables IsoWorld rendering, which also stops the
+    -- engine from draining area highlights. Do not enqueue them in that state.
+    if (ISWorldMap_instance and ISWorldMap_instance:getIsVisible())
+        or (ISWorldMap and ISWorldMap.instance and ISWorldMap.instance:getIsVisible()) then return end
     for _, entries in pairs(groups) do
         for _, entry in ipairs(entries) do
             local color = entry.color or Highlights.colors.nodes

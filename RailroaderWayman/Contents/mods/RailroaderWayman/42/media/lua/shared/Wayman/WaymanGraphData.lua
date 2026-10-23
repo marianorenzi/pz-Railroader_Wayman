@@ -50,6 +50,12 @@ function GraphData.copy(value)
     return copy(value)
 end
 
+--- Tests tables through pairs: Project Zomboid's Kahlua has no global next.
+function GraphData.isEmpty(value)
+    for _ in pairs(value) do return false end
+    return true
+end
+
 local jsonArrayFields = { availableNodes = true, switches = true, nodes = true }
 
 --- Escapes a Lua string as a compact JSON string literal.

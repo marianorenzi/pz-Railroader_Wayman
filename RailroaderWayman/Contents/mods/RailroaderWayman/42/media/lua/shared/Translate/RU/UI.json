@@ -67,6 +67,15 @@
     "UI_Wayman_MapButtonTooltip": "Редактировать граф Wayman",
     "UI_Wayman_ContextShowNodes": "Показать узлы",
     "UI_Wayman_ContextEditNodes": "Редактировать узлы объекта",
+    "UI_Wayman_Debug": "Отладка",
+    "UI_Wayman_DebugEntityCapture": "Записывать названия и ориентации объектов",
     "UI_Wayman_ContextUpdateEntity": "Обновить железнодорожный объект",
-    "UI_Wayman_UnknownServerError": "Неизвестная ошибка сервера"
+    "UI_Wayman_UnknownServerError": "Неизвестная ошибка сервера",
+    "UI_Wayman_StatusLocalSaveFailed": "Не удалось сохранить локальный черновик: %1",
+    "UI_Wayman_StatusMergeConflicts": "Конфликтов: %1. Accept — проверить; Reload — версия сервера.",
+    "UI_Wayman_StatusRRPending": "Мир обновлён; публикация в RR ожидает исправления: %1",
+    "UI_Wayman_StatusGeometryStaged": "Геометрия в локальном черновике. Accept в редакторе графа опубликует все изменения.",
+    "UI_Wayman_StageGeometry": "В черновик",
+    "UI_Wayman_StatusDraftSaved": "Черновик сохранён локально; ожидает публикации",
+    "UI_Wayman_MergeReview": "Конфликты с текущим миром:\\n%1\\n\\nДа: сохранить локальные решения с текущей канонической геометрией. Проверьте черновик и снова нажмите Accept для публикации.\\nНет: сохранить все версии без публикации. Reload удалит локальные изменения и загрузит серверную версию."
 }

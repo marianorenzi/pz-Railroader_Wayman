@@ -75,7 +75,11 @@ assertTrue(incompleteReason:find("throat", 1, true), "error omitted leg name")
 local falseEmptyLeg = GraphData.copy(draft)
 falseEmptyLeg.switches[1].legs.throat = { edge = false, toward = false }
 local falseEmptyResult, falseEmptyReason = GraphData.validateDraft(world, falseEmptyLeg)
-assertTrue(falseEmptyResult, falseEmptyReason)
+assertTrue(falseEmptyResult == nil and falseEmptyReason:find("invalid edge id", 1, true),
+    "false is not a valid edge identity")
+local emptyLeg = GraphData.copy(draft)
+emptyLeg.switches[1].legs.throat = {}
+assertTrue(GraphData.validateDraft(world, emptyLeg), "an unassigned leg must remain valid")
 
 local json, jsonReason = GraphData.worldDataToJSON({
     availableNodes = {},
@@ -112,6 +116,6 @@ assertEqual(legacy[1].x, 7, "legacy absolute node compatibility")
 print("PASS: normalized atomic graph draft and remapped temporary edge id")
 print("PASS: preserved a valid user-provided edge id")
 print("PASS: rejected duplicate blocks and stale revisions")
-print("PASS: diagnosed incomplete switch legs and normalized false empty values")
+print("PASS: diagnosed incomplete/invalid switch legs and accepted unassigned legs")
 print("PASS: serialized and deserialized compact world-data JSON")
 print("PASS: converted relative blocks to absolute nodes with legacy compatibility")

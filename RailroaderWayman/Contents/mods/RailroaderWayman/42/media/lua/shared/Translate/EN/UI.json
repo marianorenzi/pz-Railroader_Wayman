@@ -67,6 +67,15 @@
     "UI_Wayman_MapButtonTooltip": "Edit Wayman graph",
     "UI_Wayman_ContextShowNodes": "Show nodes",
     "UI_Wayman_ContextEditNodes": "Edit entity nodes",
+    "UI_Wayman_Debug": "Debug",
+    "UI_Wayman_DebugEntityCapture": "Capture entity names and orientations",
     "UI_Wayman_ContextUpdateEntity": "Update rail entity",
-    "UI_Wayman_UnknownServerError": "Unknown server error"
+    "UI_Wayman_UnknownServerError": "Unknown server error",
+    "UI_Wayman_StatusLocalSaveFailed": "Local draft could not be saved: %1",
+    "UI_Wayman_StatusMergeConflicts": "%1 draft conflicts. Accept to review; Reload to use server.",
+    "UI_Wayman_StatusRRPending": "World updated; RR publication pending: %1",
+    "UI_Wayman_StatusGeometryStaged": "Geometry staged locally. Accept in Graph Editor to publish together.",
+    "UI_Wayman_StageGeometry": "Stage",
+    "UI_Wayman_StatusDraftSaved": "Draft saved locally; publication pending",
+    "UI_Wayman_MergeReview": "Conflicts with the current world:\\n%1\\n\\nYes: keep local choices with current canonical geometry. Review the draft, then Accept again to publish.\\nNo: keep all versions without publishing. Reload discards local work and uses the server."
 }

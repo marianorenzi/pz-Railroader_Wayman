@@ -83,10 +83,11 @@ refuse = true
 world.switches = {{id="turnout_2",owner="turnout_2",at={x=100,y=100},
     legs={throat={edge="line",toward="start",external=true},through={},diverge={}}}}
 runtime.OnRemove(entity)
-assert(world.edges.line and active)
+assert(world.edges.line == nil and active and world.rrSync.pending)
 refuse = false
-runtime.OnRemove(entity)
+assert(runtime.ApplyGraphDraft(GD.copy(world),world.revision))
 assert(world.edges.line == nil and active == nil)
+assert(world.rrSync == nil)
 assert(world.switches[1].legs.throat.edge == "line", "removal confused local and external line")
 refuse = true
 local publications = registered
@@ -101,7 +102,8 @@ world.edges.line = {
 assert(RailroaderWaymanRRGraph.register(world))
 local lastGraph, lastRevision = active, world.revision
 runtime.OnRemove(entity)
-assert(active == lastGraph and world.revision == lastRevision and #world.edges.line == 2)
-print("KNOWN LIMIT: removal leaving fewer than two nodes retains the last graph and logs the error")
-print("PASS: rejected editor/geometry/removal updates preserve confirmed state")
+assert(active == lastGraph and world.revision == lastRevision + 1 and #world.edges.line == 1)
+assert(world.edges.line[1].owner == "turn_2" and world.rrSync.pending)
+print("PASS: physical removal always cleans WorldData and marks an RR refusal for repair")
+print("PASS: rejected editor/geometry publications preserve confirmed state")
 print("PASS: authoritative commits, arbitrary edge restore, SP/server paths and empty withdrawal")

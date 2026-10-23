@@ -23,12 +23,13 @@ end
 --- Installs freshly received authoritative graph data in the client cache.
 local function storeWorldData(data)
     if type(data) ~= "table" then return false end
+    if worldData and (data.revision or 0) < (worldData.revision or 0) then return false end
     worldData = GraphData.ensure(data)
     requestPending = false
     ModData.remove(WORLD_DATA_KEY)
     ModData.add(WORLD_DATA_KEY, data)
     Editor.onWorldData(data)
-    GraphDisplay.refresh(data)
+    GraphDisplay.refresh(Editor.getOverlayState(data).data)
     return true
 end
 
@@ -314,6 +315,11 @@ end
 
 --- Forwards server-side graph rejection messages to the active editor.
 local function onServerCommand(module, command, args)
+    if module == "RailroaderWayman" and command == "graphResult" then
+        if args and type(args.worldData) == "table" then storeWorldData(args.worldData) end
+        Editor.onResult(args or {})
+        return
+    end
     if module == "RailroaderWayman" and command == "graphRejected" then
         Editor.onRejected(args and args.reason or getText("UI_Wayman_UnknownServerError"))
     end
@@ -321,6 +327,9 @@ end
 
 Events.OnGameStart.Add(requestWorldData)
 Events.OnConnected.Add(requestWorldData)
+Events.OnConnected.Add(function()
+    if Editor.instance then Editor.instance.awaitingSave = false end
+end)
 Events.OnReceiveGlobalModData.Add(onReceiveGlobalModData)
 Events.OnServerCommand.Add(onServerCommand)
 
