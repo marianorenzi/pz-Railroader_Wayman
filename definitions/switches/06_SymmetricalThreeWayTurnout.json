@@ -5,6 +5,26 @@
   "iconFace": "S",
   "faces": {
     "W": {
+      "components": [
+        {
+          "type": "turnout",
+          "at": {"x": 7, "y": 0, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 0, "y": 6, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 7, "y": 17, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        }
+      ],
       "width": 11, "height": 18,
       "layers": [
         { "index":0,"tiles": [
@@ -52,6 +72,26 @@
       ]
     },
     "S": {
+      "components": [
+        {
+          "type": "turnout",
+          "at": {"x": 0, "y": 0, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 13, "y": 0, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 6, "y": 9, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        }
+      ],
       "width": 15,
       "height": 10,
       "layers": [
@@ -103,6 +143,26 @@
       ]
     },
     "E": {
+      "components": [
+        {
+          "type": "turnout",
+          "at": {"x": 0, "y": 0, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 9, "y": 6, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 0, "y": 15, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        }
+      ],
       "width":10,
       "height":16,
       "layers": [

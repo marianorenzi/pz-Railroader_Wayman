@@ -26,29 +26,31 @@ local function onFillWorldObjectContextMenu(playerNum, context, worldobjects, te
     end
     if not clickedSquare then return end
 
-    local updateInstance
+    local instances
     local objects = clickedSquare:getObjects()
     for index = 0, objects:size() - 1 do
         local object = objects:get(index)
-        local candidate = EntityDescriptor.getInstance(object)
+        local candidate = EntityDescriptor.getInstances(object)
         if candidate then
-            log("candidate " .. tostring(candidate.entityName)
-                .. " facing " .. tostring(candidate.facing)
-                .. " at clicked square " .. tostring(clickedSquare:getX()) .. ","
-                .. tostring(clickedSquare:getY()) .. "," .. tostring(clickedSquare:getZ())
-                .. "; id=" .. tostring(candidate.data.id))
-
             -- Debug geometry inspection is available on every tile of the
             -- entity, even after moving its physical switch interaction point.
-            updateInstance = candidate
+            instances = candidate
             break
         end
     end
-    if not updateInstance then return end
+    if not instances or #instances == 0 then return end
     if test then return ISWorldObjectContextMenu.setTest() end
-    if updateInstance then
-        context:addOption(getText("UI_Wayman_ContextEditNodes"), worldobjects, editRailEntity, playerNum, updateInstance)
-        log("added 'EditNodes' ContextMenu option for " .. tostring(updateInstance.data.id))
+    local label = getText("UI_Wayman_ContextEditNodes")
+    if #instances == 1 then
+        context:addOption(label, worldobjects, editRailEntity, playerNum, instances[1])
+    else
+        local option = context:addOption(label, nil, nil)
+        local submenu = ISContextMenu:getNew(context)
+        context:addSubMenu(option, submenu)
+        for index, instance in ipairs(instances) do
+            submenu:addOption(instance.data.id or (instance.defaults.kind .. " " .. tostring(index)),
+                worldobjects, editRailEntity, playerNum, instance)
+        end
     end
 end
 

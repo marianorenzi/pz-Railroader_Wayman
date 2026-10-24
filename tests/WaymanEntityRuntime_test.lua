@@ -116,8 +116,9 @@ local supported = {
 }
 
 local missingGeometry = {
-    { "SymmetricalThreeWayTurnout", { "W", "S", "E" } },
-    { "SymmetricalCompactThreeWayTurnout", { "W", "E" } },
+    { "SymmetricalThreeWayTurnout", { "N" } },
+    { "SymmetricalCompactThreeWayTurnout", { "N", "S" } },
+    { "UnknownRailEntity", { "W", "E" } },
 }
 
 -- Exercise an explicitly empty list in addition to the absent-list cases in
@@ -355,7 +356,7 @@ assertEqual(worldTransmissions, transmissionsBeforeRemoval + 1, "removal transmi
 
 print = originalPrint
 originalPrint("PASS: registered " .. tostring(#created - 5) .. " supported entity orientations")
-originalPrint("PASS: skipped and logged 5 pending entity orientations")
+originalPrint("PASS: skipped and logged 5 unsupported entity orientations")
 originalPrint("PASS: " .. tostring(#result.availableNodes) .. " availableNodes, "
     .. tostring(#result.switches) .. " switches, no entities collection")
 originalPrint("PASS: removed entity data atomically")

@@ -36,6 +36,15 @@ RailroaderWaymanEntityGeometry = {
         S = { at = { x = 6, y = 5, z = 0 }, switch = { x = 7, y = 2, z = 0 }, divergingNodes = {  }, kind = "turnout" },
         W = { at = { x = 4, y = 3, z = 0 }, switch = { x = 6, y = 4, z = 0 }, divergingNodes = {  }, kind = "turnout" },
     },
+    SymmetricalCompactThreeWayTurnout = {
+        W = { components = { { type = "turnout", at = { x = 5, y = 4, z = 0 }, switch = { x = 2, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 5, y = 4, z = 0 }, switch = { x = 0, y = 1, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 5, y = 4, z = 0 }, switch = { x = 2, y = 7, z = 0 }, divergingNodes = {  } } } },
+        E = { components = { { type = "turnout", at = { x = 3, y = 5, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 3, y = 5, z = 0 }, switch = { x = 5, y = 2, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 3, y = 5, z = 0 }, switch = { x = 0, y = 6, z = 0 }, divergingNodes = {  } } } },
+    },
+    SymmetricalThreeWayTurnout = {
+        W = { components = { { type = "turnout", at = { x = 7, y = 0, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 0, y = 6, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 7, y = 17, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } } } },
+        S = { components = { { type = "turnout", at = { x = 0, y = 0, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 13, y = 0, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 6, y = 9, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } } } },
+        E = { components = { { type = "turnout", at = { x = 0, y = 0, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 9, y = 6, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } }, { type = "turnout", at = { x = 0, y = 15, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  } } } },
+    },
     WyeTurnout = {
         S = { at = { x = 6, y = 5, z = 0 }, switch = { x = 3, y = 4, z = 0 }, divergingNodes = {  }, throughNodes = { { x = 6, y = 4, z = 0 }, { x = 6, y = 3, z = 0 } }, kind = "turnout" },
     },

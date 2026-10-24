@@ -91,6 +91,7 @@ function Drafts.nodeKey(instance)
     local origin = instance.origin
     return "unregistered:" .. instance.entityName .. ":" .. instance.facing .. ":"
         .. tostring(origin.x) .. ":" .. tostring(origin.y) .. ":" .. tostring(origin.z or 0)
+        .. (instance.componentIndex and ":component:" .. tostring(instance.componentIndex) or "")
 end
 
 function Drafts.preview(state)

@@ -16,7 +16,6 @@ local Controller = RailroaderWaymanNodeEditor
 local Descriptor = RailroaderWaymanEntityDescriptor
 local Drafts = RailroaderWaymanLocalDraft
 local Highlights = RailroaderWaymanWorldHighlights
-local OBJECT_DATA_KEY = "railroaderWayman"
 local HIGHLIGHT_GROUP = "node-editor"
 local HOVER_HIGHLIGHT_GROUP = "node-editor-hover"
 local SPACING, BUTTON_H = 10, 25
@@ -495,6 +494,7 @@ function NodeEditor:onApply()
         x = square:getX(), y = square:getY(), z = square:getZ(),
         objectIndex = master:getObjectIndex(),
         facing = self.instance.facing,
+        componentIndex = self.instance.componentIndex,
         modData = self:submittedData(),
         requestId = "entity:" .. tostring(getTimestampMs()) .. ":" .. tostring(self.localState.sequence or 0),
     }
@@ -505,7 +505,8 @@ function NodeEditor:onApply()
         sendClientCommand(getSpecificPlayer(self.playerNum) or getPlayer(),
             "RailroaderWayman", "updateRailEntity", args)
     elseif RailroaderWaymanEntityRuntime then
-        local ok, result = RailroaderWaymanEntityRuntime.SaveGeometry(master, args.modData, args.facing)
+        local ok, result = RailroaderWaymanEntityRuntime.SaveGeometry(
+            master, args.modData, args.facing, args.componentIndex)
         self:onSaveResult(ok, result)
     end
 end
@@ -523,7 +524,7 @@ function NodeEditor:onReload()
         if RailroaderWaymanGraphEditor.instance then RailroaderWaymanGraphEditor.instance:syncLocalState() end
     end
     if self.localState then Drafts.save(self.localState) end
-    self.instance.data = self.instance.master:getModData()[OBJECT_DATA_KEY] or {}
+    self.instance.data = Descriptor.instanceData(self.instance)
     self.instance.data = viewData(self.instance, self.localState)
     self.blocks = readBlocks(self.instance)
     self.selectedBlock = nil
@@ -539,7 +540,7 @@ function NodeEditor:onSaveResult(ok, reason)
     if ok then
         self.localState.nodeDrafts[Drafts.nodeKey(self.instance)] = nil
         local submitted = self:submittedData()
-        local received = self.instance.master:getModData()[OBJECT_DATA_KEY] or {}
+        local received = Descriptor.instanceData(self.instance)
         submitted.id = reason
         self.instance.data = received.id == reason and received or submitted
         Drafts.save(self.localState)

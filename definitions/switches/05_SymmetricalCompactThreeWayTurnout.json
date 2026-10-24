@@ -5,6 +5,26 @@
   "iconFace": "W",
   "faces": {
     "W": {
+      "components": [
+        {
+          "type": "turnout",
+          "at": {"x": 5, "y": 4, "z": 0},
+          "switch": {"x": 2, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 5, "y": 4, "z": 0},
+          "switch": {"x": 0, "y": 1, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 5, "y": 4, "z": 0},
+          "switch": {"x": 2, "y": 7, "z": 0},
+          "divergingNodes": []
+        }
+      ],
       "width": 6,
       "height": 8,
       "layers": [
@@ -50,33 +70,53 @@
       ]
     },
     "E": {
+      "components": [
+        {
+          "type": "turnout",
+          "at": {"x": 3, "y": 5, "z": 0},
+          "switch": {"x": 0, "y": 0, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 3, "y": 5, "z": 0},
+          "switch": {"x": 5, "y": 2, "z": 0},
+          "divergingNodes": []
+        },
+        {
+          "type": "turnout",
+          "at": {"x": 3, "y": 5, "z": 0},
+          "switch": {"x": 0, "y": 6, "z": 0},
+          "divergingNodes": []
+        }
+      ],
       "width": 6,
       "height": 8,
       "layers": [
         {
           "index": 0,
           "tiles": [
-            [null, null, "industry_railroad_05_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            ["industry_railroad_05_55", null, "industry_railroad_03_37", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            ["industry_railroad_01_7", "industry_railroad_01_7", "industry_railroad_03_34", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            [null, null, "industry_railroad_04_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            ["industry_railroad_01_7", "industry_railroad_01_7", "industry_railroad_01_7", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            [null, "industry_railroad_04_0", "industry_railroad_04_3", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            [null, null, "industry_railroad_04_5", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            [null, null, "industry_railroad_05_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"]
+            ["industry_railroad_05_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", null, null],
+            [null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", null, null],
+            [null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", "industry_railroad_04_34", "industry_railroad_05_55"],
+            [null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", "industry_railroad_03_63", "industry_railroad_01_5"],
+            [null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", "industry_railroad_04_26", "industry_railroad_01_4"],
+            [null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", "industry_railroad_03_58", "industry_railroad_01_3"],
+            ["industry_railroad_05_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", "industry_railroad_03_56", null],
+            [null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2", null, null]
           ]
         },
         {
           "index": 1,
           "tiles": [
             [null, null, null, null, null, null],
-            [null, null, null, "industry_railroad_03_29", "industry_railroad_01_1", "industry_railroad_01_2"],
-            ["industry_railroad_04_47", "industry_railroad_04_46", null, "industry_railroad_03_38", "industry_railroad_03_28", "industry_railroad_03_30"],
-            [null, null, null, "industry_railroad_03_27", "industry_railroad_03_24", "industry_railroad_03_27"],
-            ["industry_railroad_04_53", "industry_railroad_04_51", null, "industry_railroad_03_33", "industry_railroad_03_36", null],
-            [null, null, null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            [null, null, null, "industry_railroad_04_8", "industry_railroad_04_10", "industry_railroad_04_12"],
-            [null, null, null, null, null, null]
+            [null, "industry_railroad_04_42", null, "industry_railroad_04_39", null, null],
+            [null, "industry_railroad_04_40", null, "industry_railroad_04_36", null, null],
+            [null, "industry_railroad_03_57", "industry_railroad_03_58", "industry_railroad_03_62", "industry_railroad_04_25", "industry_railroad_05_54"],
+            [null, "industry_railroad_03_53", "industry_railroad_03_56", "industry_railroad_04_24", null, null],
+            [null, "industry_railroad_03_49", null, "industry_railroad_03_57", "industry_railroad_04_27", "industry_railroad_03_52"],
+            [null, "industry_railroad_03_0", null, "industry_railroad_03_53", null, null],
+            [null, "industry_railroad_03_0", null, "industry_railroad_03_49", null, null]
           ]
         },
         {
@@ -84,10 +124,10 @@
           "tiles": [
             [null, null, null, null, null, null],
             [null, null, null, null, null, null],
-            ["industry_railroad_05_54", null, null, null, null, null],
-            [null, null, null, "industry_railroad_04_50", null, null],
-            [null, null, null, "industry_railroad_04_4", "industry_railroad_04_7", null],
-            [null, null, null, null, "industry_railroad_04_9", null],
+            [null, null, null, null, null, null],
+            [null, "industry_railroad_04_37", "industry_railroad_04_35", null, null, null],
+            [null, null, "industry_railroad_04_32", null, null, null],
+            [null, "industry_railroad_03_45", null, null, null, null],
             [null, null, null, null, null, null],
             [null, null, null, null, null, null]
           ]

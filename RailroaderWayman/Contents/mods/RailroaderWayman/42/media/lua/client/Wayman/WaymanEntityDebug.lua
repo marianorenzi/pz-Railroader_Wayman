@@ -11,7 +11,6 @@ local EntityDebug = RailroaderWaymanEntityDebug
 local GraphData = RailroaderWaymanGraphData
 local Descriptor = RailroaderWaymanEntityDescriptor
 local WORLD_DATA_KEY = "RailroaderWayman_World"
-local OBJECT_DATA_KEY = "railroaderWayman"
 local clientData
 local watching = false
 
@@ -79,10 +78,10 @@ end
 
 --- Only registered owners can be linked to the existing graph export.
 local function captureObject(object)
-    local entity = Descriptor.describe(object)
-    if not entity then return end
-    local data = entity.master:getModData()[OBJECT_DATA_KEY]
-    if data then EntityDebug.capture(entity, data.id) end
+    local instances = Descriptor.getInstances(object)
+    for _, entity in ipairs(instances or {}) do
+        EntityDebug.capture(entity, entity.data.id)
+    end
 end
 
 local function captureSquare(square, seen)
