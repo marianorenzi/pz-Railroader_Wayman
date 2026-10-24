@@ -4,6 +4,12 @@ local root = source:match("^(.*)/tests/") or "."
 local luaRoot = root .. "/RailroaderWayman/Contents/mods/RailroaderWayman/42/media/lua"
 package.path = luaRoot .. "/shared/?.lua;" .. package.path
 local world, broadcasts, client, server, refuse, active = {}, 0, false, true, false, nil
+local saves, savedByServer = {}, {}
+function save(doCharacters)
+    assert(doCharacters and not client, "only the authority may request a world save")
+    saves[#saves + 1] = RailroaderWaymanGraphData.copy(world)
+    savedByServer[#saves] = server
+end
 ModData = {
     getOrCreate = function() return world end,
     transmit = function() broadcasts = broadcasts + 1 end,
@@ -46,9 +52,12 @@ refuse = true
 local ok, why = runtime.ApplyGraphDraft(draft, 0)
 assert(not ok and why == "overlap: wayman:line")
 assert(world.revision == 0 and world.edges.line == nil and broadcasts == 0 and active == nil)
+assert(#saves == 0, "RR rejection requested a world save")
 refuse = false
 assert(runtime.ApplyGraphDraft(draft, 0))
 assert(world.revision == 1 and broadcasts == 1 and active.edges["wayman:line"])
+assert(#saves == 1 and savedByServer[1] and saves[1].revision == 1 and saves[1].edges.line,
+    "accepted server graph was not committed before requesting a save")
 assert(not runtime.ApplyGraphDraft(draft, 0))
 client = true
 assert(not runtime.ApplyGraphDraft(draft, 1))
@@ -58,10 +67,19 @@ assert(registered == before)
 client = false
 restore()
 assert(registered == before + 1, "load must restore any edge name, without requiring wayman")
+assert(#saves == 1, "stale/client publications or restoration requested another save")
 
 -- Exercise the same entry points in SP as on the dedicated-server path.
 server = false
 restore()
+assert(#saves == 1, "restoration requested another world save")
+refuse = true
+assert(not runtime.ApplyGraphDraft(GD.copy(world), world.revision))
+assert(#saves == 1, "rejected singleplayer publication requested a save")
+refuse = false
+assert(runtime.ApplyGraphDraft(GD.copy(world), world.revision))
+assert(#saves == 2 and not savedByServer[2] and saves[2].revision == world.revision and saves[2].edges.line,
+    "accepted singleplayer graph was not committed before the world save")
 local modData = {railroaderWayman={id="turn_1"}}
 local entity = {getModData=function() return modData end,transmitModData=function() end}
 RailroaderWaymanEntityDescriptor.describe = function()
@@ -88,6 +106,8 @@ refuse = false
 assert(runtime.ApplyGraphDraft(GD.copy(world),world.revision))
 assert(world.edges.line == nil and active == nil)
 assert(world.rrSync == nil)
+assert(#saves == 3 and saves[3].edges.line == nil and saves[3].rrSync == nil,
+    "accepted withdrawal was not persisted after clearing pending RR synchronization")
 assert(world.switches[1].legs.throat.edge == "line", "removal confused local and external line")
 refuse = true
 local publications = registered
@@ -107,3 +127,4 @@ assert(world.edges.line[1].owner == "turn_2" and world.rrSync.pending)
 print("PASS: physical removal always cleans WorldData and marks an RR refusal for repair")
 print("PASS: rejected editor/geometry publications preserve confirmed state")
 print("PASS: authoritative commits, arbitrary edge restore, SP/server paths and empty withdrawal")
+print("PASS: accepted SP/server publications request a save; rejections, restores and clients do not")

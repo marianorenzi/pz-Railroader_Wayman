@@ -612,6 +612,12 @@ function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision, geom
             RailroaderWaymanEntityDebug.capture(change.entity, change.owner)
         end
     end
+    -- GlobalModData is written by a world save in SP and on the server.
+    -- Request it after the complete commit, before acknowledging publication.
+    if not isClient() then
+        log("requesting world save for accepted graph revision " .. tostring(worldData.revision))
+        save(true)
+    end
     transmitWorldData()
     log("graph update accepted at revision " .. tostring(worldData.revision))
     return true, GraphData.copy(worldData)

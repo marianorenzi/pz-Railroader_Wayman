@@ -29,12 +29,12 @@ module RailroaderWayman
             {
                 layer
                 {
-                    row = false false false railroader_wayman_switches_12_31 railroader_wayman_switches_12_32 railroader_wayman_switches_12_33,
-                    row = false false railroader_wayman_switches_12_34 railroader_wayman_switches_12_35 railroader_wayman_switches_12_36 railroader_wayman_switches_12_37,
-                    row = false false false railroader_wayman_switches_12_38 railroader_wayman_switches_12_39 railroader_wayman_switches_12_40,
-                    row = false false railroader_wayman_switches_12_41 railroader_wayman_switches_12_42 railroader_wayman_switches_12_43 railroader_wayman_switches_12_44,
-                    row = false railroader_wayman_switches_12_45 railroader_wayman_switches_12_46 railroader_wayman_switches_12_47 railroader_wayman_switches_12_48 railroader_wayman_switches_12_49,
-                    row = railroader_wayman_switches_12_50 railroader_wayman_switches_12_51 railroader_wayman_switches_12_52 railroader_wayman_switches_12_53 railroader_wayman_switches_12_54 railroader_wayman_switches_12_55,
+                    row = false false false railroader_wayman_switches_12_31 railroader_wayman_switches_12_32 railroader_wayman_switches_12_33 railroader_wayman_switches_12_56 railroader_wayman_switches_12_57 railroader_wayman_switches_12_58 railroader_wayman_switches_12_59 railroader_wayman_switches_12_60,
+                    row = false false railroader_wayman_switches_12_34 railroader_wayman_switches_12_35 railroader_wayman_switches_12_36 railroader_wayman_switches_12_37 railroader_wayman_switches_12_61 railroader_wayman_switches_12_62 railroader_wayman_switches_12_63 railroader_wayman_switches_13_0 false,
+                    row = false false false railroader_wayman_switches_12_38 railroader_wayman_switches_12_39 railroader_wayman_switches_12_40 railroader_wayman_switches_13_1 railroader_wayman_switches_13_2 railroader_wayman_switches_13_3 false false,
+                    row = false false railroader_wayman_switches_12_41 railroader_wayman_switches_12_42 railroader_wayman_switches_12_43 railroader_wayman_switches_12_44 railroader_wayman_switches_13_4 railroader_wayman_switches_13_5 false false false,
+                    row = false railroader_wayman_switches_12_45 railroader_wayman_switches_12_46 railroader_wayman_switches_12_47 railroader_wayman_switches_12_48 railroader_wayman_switches_12_49 railroader_wayman_switches_13_6 false false false false,
+                    row = railroader_wayman_switches_12_50 railroader_wayman_switches_12_51 railroader_wayman_switches_12_52 railroader_wayman_switches_12_53 railroader_wayman_switches_12_54 railroader_wayman_switches_12_55 false false false false false,
                 }
             }
 

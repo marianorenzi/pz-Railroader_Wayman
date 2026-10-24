@@ -33,7 +33,7 @@ RailroaderWaymanEntityGeometry = {
     },
     Right45DegTurnoutDiag = {
         N = { at = { x = 5, y = 4, z = 0 }, switch = { x = 2, y = 4, z = 0 }, divergingNodes = {  }, kind = "turnout" },
-        S = { at = { x = 2, y = 6, z = 0 }, switch = { x = 3, y = 3, z = 0 }, divergingNodes = {  }, kind = "turnout" },
+        S = { at = { x = 6, y = 5, z = 0 }, switch = { x = 7, y = 2, z = 0 }, divergingNodes = {  }, kind = "turnout" },
         W = { at = { x = 4, y = 3, z = 0 }, switch = { x = 6, y = 4, z = 0 }, divergingNodes = {  }, kind = "turnout" },
     },
     WyeTurnout = {
