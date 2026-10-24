@@ -1,5 +1,7 @@
 {
   "entity": "TrackSegmentDiag",
+  "costProfile": "track",
+  "costMultiplier": 2,
   "iconFace": "W",
   "faces": {
     "N": { "width": 5, "height": 1, "layers": [{ "index": 0, "tiles": [["industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_01_18", "industry_railroad_01_19", "industry_railroad_01_20"]] }] },

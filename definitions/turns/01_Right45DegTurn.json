@@ -1,5 +1,7 @@
 {
   "entity": "Right45DegTurn",
+  "costProfile": "turn",
+  "costMultiplier": 1,
   "iconFace": "W",
   "faces": {
     "N": {

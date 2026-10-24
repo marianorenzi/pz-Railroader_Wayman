@@ -13,5 +13,7 @@
     "WaymanEntityName_SymmetricalCompactThreeWayTurnout": "Compact symmetrical three-way turnout",
     "WaymanEntityName_SymmetricalThreeWayTurnout": "Symmetrical three-way turnout",
     "WaymanEntityName_TrackSegment": "Track segment",
-    "WaymanEntityName_WyeTurnout": "Wye turnout"
+    "WaymanEntityName_WyeTurnout": "Wye turnout",
+    "Recipe_ForgeRailroadSpike": "Forge railroad spike",
+    "Recipe_CastRailroadSpike": "Cast railroad spike"
 }

@@ -44,16 +44,16 @@ module RailroaderWayman
         {
             timedAction = BuildWoodenStructureSmall,
             time = 300,
-            SkillRequired = Woodwork:2,
-            xpAward = Woodwork:10,
+            SkillRequired = Woodwork:7;MetalWelding:5,
+            xpAward = Woodwork:30;MetalWelding:15,
             category = Railroad,
             Tags = Carpentry;CanBeDoneFromFloor,
             inputs
             {
                 item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
-                item 3 [Base.LargePlank],
+                item 6 [Base.Plank],
+                item 4 [Base.RailroadSpike],
                 item 2 [Base.MetalBar],
-                item 6 [Base.RailroadSpike],
             }
         }
     }

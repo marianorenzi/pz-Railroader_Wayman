@@ -1,5 +1,7 @@
 {
   "entity": "Left45DegTurnoutDiag",
+  "costProfile": "turnout",
+  "costMultiplier": 1,
   "iconFace": "N",
   "faces": {
     "N": {

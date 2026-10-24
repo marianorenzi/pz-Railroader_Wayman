@@ -1,5 +1,7 @@
 {
   "entity": "WyeTurnout",
+  "costProfile": "turnout",
+  "costMultiplier": 1,
   "iconFace": "S",
   "faces": {
     "S": {

@@ -12,7 +12,6 @@ module RailroaderWayman
         component SpriteConfig
         {
             isThumpable = false,
-            OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
 
             face W
             {
@@ -94,9 +93,8 @@ module RailroaderWayman
             inputs
             {
                 item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
-                item 3 [Base.LargePlank],
-                item 2 [Base.MetalBar],
-                item 6 [Base.RailroadSpike],
+                item 3 [Base.Plank],
+                item 3 [Base.Nails],
             }
         }
     }

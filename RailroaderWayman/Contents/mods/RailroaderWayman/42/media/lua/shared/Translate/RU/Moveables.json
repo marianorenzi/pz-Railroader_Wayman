@@ -1,0 +1,17 @@
+{
+    "Wayman_CrossingSegment": "Пересечение путей",
+    "Wayman_DiagonalCrossingEdge": "Край диагонального пересечения",
+    "Wayman_DiagonalCrossingSegment": "Диагональное пересечение путей",
+    "Wayman_DiagonalTrackSegment": "Диагональный участок пути",
+    "Wayman_Left45DegTurn": "Левый поворот 45°",
+    "Wayman_Left45DegTurnout": "Левая стрелка 45°",
+    "Wayman_Left45DegTurnoutDiag": "Левая диагональная стрелка 45°",
+    "Wayman_Left90DegTurnout": "Левая стрелка 90°",
+    "Wayman_Right45DegTurn": "Правый поворот 45°",
+    "Wayman_Right45DegTurnout": "Правая стрелка 45°",
+    "Wayman_Right45DegTurnoutDiag": "Правая диагональная стрелка 45°",
+    "Wayman_SymmetricalCompactThreeWayTurnout": "Компактная симметричная трёхпутная стрелка",
+    "Wayman_SymmetricalThreeWayTurnout": "Симметричная трёхпутная стрелка",
+    "Wayman_TrackSegment": "Участок пути",
+    "Wayman_WyeTurnout": "Y-образная стрелка"
+}
