@@ -50,6 +50,25 @@ local world = {
         },
     }},
 }
+-- Normal registration must not pay for diagnostic JSON; debug still exposes
+-- both complete snapshots. Explicit UI export is exercised by the editor suite.
+local encode, output = GD.worldDataToJSON, print
+local encoded, messages = 0, {}
+GD.worldDataToJSON = function(...)
+    encoded = encoded + 1
+    return encode(...)
+end
+print = function(message) messages[#messages + 1] = message end
+getDebug = nil
+assert(graph.export(world) and encoded == 0 and #messages == 0)
+function getDebug() return false end
+assert(graph.export(world) and encoded == 0 and #messages == 0)
+getDebug = function() return true end
+assert(graph.export(world) and encoded == 2 and #messages == 2)
+assert(messages[1]:find("GRAPH_BEFORE_EXPORT",1,true) and messages[2]:find("GRAPH_AFTER_EXPORT",1,true))
+getDebug = function() return false end
+GD.worldDataToJSON, print = encode, output
+
 local def, reason = graph.export(world)
 assert(def, reason)
 assert(def.origin == nil and def.edges["wayman:main"][1].x == 12)

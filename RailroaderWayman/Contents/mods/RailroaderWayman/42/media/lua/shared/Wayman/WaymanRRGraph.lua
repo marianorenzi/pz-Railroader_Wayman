@@ -117,6 +117,9 @@ local function grid(node)
 end
 
 local function logGraphJSON(label, graph)
+    -- Guard serialization too: a quiet print alone would still encode the graph.
+    -- The editor's explicit Export action has its own unrestricted JSON output.
+    if not (getDebug and getDebug()) then return end
     local json, reason = GraphData.worldDataToJSON(graph)
     print("[RailroaderWayman] " .. label .. (json and (" " .. json) or ("_ERROR " .. tostring(reason))))
 end

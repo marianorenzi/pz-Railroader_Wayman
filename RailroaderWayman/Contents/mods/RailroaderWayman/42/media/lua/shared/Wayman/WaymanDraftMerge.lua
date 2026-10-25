@@ -33,9 +33,12 @@ function Merge.merge(base, draft, current)
     local rb, rl, ro, rs = index(current)
     local conflicts = {}
     local function conflict(path) conflicts[#conflicts + 1] = path end
-    local function choose(b, l, r, path)
+    local function choose(b, l, r, path, firstId, secondId)
         if Merge.equal(l, b) then return GD.copy(r) end
         if Merge.equal(r, b) or Merge.equal(l, r) then return GD.copy(l) end
+        -- Most node pairs agree. Build their diagnostic IDs only on conflict,
+        -- avoiding a temporary string for every pair in a large ordered edge.
+        if firstId then path = path .. firstId .. "/" .. secondId end
         local function describe(value)
             if value == nil then return "(absent)" end
             local json = GD.worldDataToJSON({value=value})
@@ -90,6 +93,7 @@ function Merge.merge(base, draft, current)
     -- A cycle means the independently chosen order constraints are incompatible.
     for edge, list in pairs(result.edges) do
         local outgoing, degree = {}, {}
+        local orderPath = "order " .. edge .. ": "
         for _, block in ipairs(list) do outgoing[block.blockId], degree[block.blockId] = {}, 0 end
         local function before(a, b, locations, order)
             if locations[a] == edge and locations[b] == edge then return order[a] < order[b] end
@@ -99,7 +103,7 @@ function Merge.merge(base, draft, current)
             for j = i + 1, #list do
                 local a, b = list[i].blockId, list[j].blockId
                 local order = choose(before(a,b,bl,bo), before(a,b,ll,lo), before(a,b,rl,ro),
-                    "order " .. edge .. ": " .. a .. "/" .. b)
+                    orderPath, a, b)
                 if order ~= nil then
                     local first, last = order and a or b, order and b or a
                     outgoing[first][last], degree[last] = true, degree[last] + 1

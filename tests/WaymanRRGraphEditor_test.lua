@@ -64,5 +64,15 @@ editor.refreshAll=function() end
 editor:onDeleteEdge()
 assert(legs.throat.edge == "main" and legs.throat.external, "deleting Wayman main removed RR main")
 assert(legs.through.edge == nil and legs.diverge.edge == "other:line")
+-- Export is an explicit user action and stays available outside debug mode.
+function getDebug() return false end
+ModData = {get=function() return editor.draft end}
+local output, exported = print
+print = function(message) exported = message end
+editor:onExport()
+print = output
+assert(exported and exported:find("[RailroaderWayman] WORLD_DATA_JSON ",1,true) == 1,
+    "explicit graph Export was disabled outside debug mode")
 print("PASS: turnout labels include every prefix and preserve real external IDs")
 print("PASS: native and local main stay distinct through selection and deletion")
+print("PASS: explicit graph export remains available outside debug mode")

@@ -1,6 +1,6 @@
 {
   "entity": "SymmetricalCompactThreeWayTurnout",
-  "costProfile": "track",
+  "costProfile": "turnout",
   "costMultiplier": 3,
   "iconFace": "W",
   "faces": {

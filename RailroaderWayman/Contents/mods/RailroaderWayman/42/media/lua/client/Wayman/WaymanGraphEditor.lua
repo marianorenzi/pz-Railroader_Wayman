@@ -767,7 +767,9 @@ end
 --- while Reload explicitly chooses the server snapshot.
 function GraphEditor:reviewConflicts()
     local conflicts = self.localState.conflicts
-    print("[RailroaderWayman] draft conflicts: " .. table.concat(conflicts, "; "))
+    if getDebug and getDebug() then
+        print("[RailroaderWayman] draft conflicts: " .. table.concat(conflicts, "; "))
+    end
     local text = WaymanLocalization.ui("MergeReview", table.concat(conflicts, "\n"))
     text = text:gsub("<", "("):gsub(">", ")"):gsub("\\n", "\n"):gsub("\n", " <LINE> ")
     local modal = ISModalRichText:new(0, 0, 620, 360, text, true, self, function(target, button)

@@ -520,7 +520,8 @@ function NodeEditor:onReload()
     if self.localState and self.instance.data.id then
         self.localState.geometry[self.instance.data.id] = nil
         local current = ModData.get("RailroaderWayman_World")
-        if current then Drafts.rebase(self.localState, current) end
+        -- Discard also restores preview geometry when the authority is unchanged.
+        if current then Drafts.rebase(self.localState, current, true) end
         if RailroaderWaymanGraphEditor.instance then RailroaderWaymanGraphEditor.instance:syncLocalState() end
     end
     if self.localState then Drafts.save(self.localState) end

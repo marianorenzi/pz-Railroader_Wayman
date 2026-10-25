@@ -17,7 +17,7 @@ function getServerIP() return "127.0.0.1" end
 function getServerPort() return 16261 end
 function getServerName() return "test-server" end
 function getTimestampMs() return 1234 end
-local files, lastPath, failWrite = {}, nil, false
+local files, lastPath, failWrite, journalWrites = {}, nil, false, 0
 function getFileReader(path)
     if not files[path] then return nil end
     local done = false
@@ -26,6 +26,7 @@ end
 function getFileWriter(path)
     lastPath = path
     return {write=function(_, value)
+        journalWrites = journalWrites + 1
         files[path] = failWrite and value:sub(1, 20) or value
         if failWrite then error("simulated interrupted write") end
     end,close=function() end}
@@ -68,12 +69,88 @@ right = GD.copy(base); right.edges.line = nil; right.availableNodes = GD.copy(ba
 merged, conflicts = Merge.merge(base,left,right)
 assert(#conflicts > 0, "deletion versus reorder was not detected")
 
+-- Concurrently assigning the same available blocks in opposite orders must
+-- keep the exact pair identity in the conflict shown to the reviewer.
+local orderBase = GD.ensure({revision=1,availableNodes={block("a",0),block("b",10)}})
+local orderLocal, orderRemote = GD.copy(orderBase), GD.copy(orderBase)
+orderLocal.edges.line = {orderLocal.availableNodes[1],orderLocal.availableNodes[2]}
+orderRemote.edges.line = {orderRemote.availableNodes[2],orderRemote.availableNodes[1]}
+orderLocal.availableNodes, orderRemote.availableNodes = {}, {}
+local _, orderConflicts = Merge.merge(orderBase,orderLocal,orderRemote)
+local pairConflict = false
+for _, message in ipairs(orderConflicts) do
+    if message:find("order line: a:nodes/b:nodes",1,true) then pairConflict = true end
+end
+assert(pairConflict, "concurrent order conflict lost its edge/block identifiers")
+
 local function boot()
     package.loaded["Wayman/WaymanLocalDraft"] = nil
     return require "Wayman/WaymanLocalDraft"
 end
 local Drafts = boot()
 local state = Drafts.open(base)
+-- Revision fast paths must preserve local work and request correlation, while
+-- avoiding a merge or journal rewrite for a repeated authority snapshot.
+local previousSaveName, realMerge = saveName, Merge.merge
+saveName = "revision-fast-paths"
+local mergeCalls = 0
+Merge.merge = function(...)
+    mergeCalls = mergeCalls + 1
+    return realMerge(...)
+end
+local function fresh()
+    return {base=GD.copy(base),draft=GD.copy(base),geometry={},nodeDrafts={},conflicts={}}
+end
+local same = fresh()
+same.draft.edges.line[1].invertNodes = true
+same.geometry.a = {geometry={kind="turn",nodes={{x=9,y=0,z=0}}}}
+same.nodeDrafts.b = {unregistered=false}
+same.pending = {requestId="still-pending"}
+same.conflicts, same.remote = {"existing conflict"}, GD.copy(base)
+same.remote.revision = base.revision + 1
+local oldDraft, oldGeometry, writes = same.draft, same.geometry, journalWrites
+Drafts.rebase(same,GD.copy(base))
+assert(mergeCalls == 0 and journalWrites == writes, "same revision repeated merge or disk write")
+assert(same.draft == oldDraft and same.geometry == oldGeometry and same.nodeDrafts.b)
+assert(same.draft.edges.line[1].invertNodes and same.pending.requestId == "still-pending")
+assert(same.conflicts[1] == "existing conflict" and same.remote.revision == base.revision + 1)
+
+local newer, clean = GD.copy(base), fresh()
+newer.revision = base.revision + 1
+newer.edges.line[1].nodes[1].x = 6
+clean.pending = {requestId="unconfirmed"}
+Drafts.rebase(clean,newer)
+assert(mergeCalls == 0 and journalWrites == writes + 1, "clean newer graph went through the merge")
+assert(clean.base.revision == newer.revision and clean.draft.edges.line[1].nodes[1].x == 6)
+assert(clean.base ~= newer and clean.draft ~= newer and clean.base ~= clean.draft)
+assert(not Drafts.changed(clean) and clean.pending.requestId == "unconfirmed")
+
+local edited = fresh()
+edited.draft.edges.line[1].invertNodes = true
+Drafts.rebase(edited,newer)
+assert(mergeCalls == 1 and edited.draft.edges.line[1].invertNodes,
+    "newer authority snapshot discarded the local inversion")
+assert(edited.base.revision == newer.revision and edited.draft.edges.line[1].nodes[1].x == 6)
+
+local older, rollback = GD.copy(base), fresh()
+older.revision = base.revision - 1
+rollback.draft.edges.incomplete = {}
+Drafts.rebase(rollback,older)
+assert(mergeCalls == 1 and rollback.draft.edges.incomplete and #rollback.conflicts == 1)
+assert(rollback.base.revision == base.revision and rollback.remote.revision == older.revision)
+
+local retry = fresh()
+failWrite = true
+assert(not Drafts.save(retry) and retry.storageError)
+failWrite, writes = false, journalWrites
+Drafts.rebase(retry,GD.copy(base))
+assert(not retry.storageError and journalWrites == writes + 1 and mergeCalls == 1,
+    "equal revision prevented retrying a failed journal write")
+assert(Drafts.reset(same,GD.copy(base)))
+assert(not Drafts.changed(same) and not same.pending and not same.remote and #same.conflicts == 0,
+    "explicit reload at the same revision did not discard local work")
+Merge.merge, saveName = realMerge, previousSaveName
+
 assert(not Drafts.changed(state), "opening a clean editor must work without global next")
 state.geometry.pending = {}
 assert(Drafts.changed(state), "staged geometry must mark the draft pending")
@@ -199,6 +276,17 @@ assert(opened == 1 and node.localState.geometry.a.modData.nodes[1].x == 5)
 assert(node.localState.nodeDrafts.a == nil and objectData.railroaderWayman.nodes == nil)
 reopened = nodeClass:new(0,0,700,500,instance(),0)
 assert(reopened.blocks[1].nodes[1].x == 5 and not reopened.dirty)
+-- Reload discards this staged geometry even when the graph revision is unchanged.
+-- Other staged owners still need their previews after canonical geometry returns.
+node.localState.geometry.b = {geometry={kind="turn",nodes={{x=12,y=0,z=0}}}}
+Drafts.preview(node.localState)
+local unchangedRevision = world.revision
+node:onReload()
+assert(world.revision == unchangedRevision and node.localState.geometry.a == nil)
+assert(node.blocks[1].nodes[1].x == 0 and node.localState.draft.edges.line[1].nodes[1].x == 0,
+    "same-revision node Reload retained discarded preview geometry")
+assert(node.localState.geometry.b and node.localState.draft.edges.line[2].nodes[1].x == 12,
+    "node Reload discarded another owner's staged geometry")
 local missing = instance(); missing.data={}
 local unregistered = nodeClass:new(0,0,700,500,missing,0)
 unregistered.statusLabel={setName=function() end}
@@ -231,3 +319,4 @@ print("PASS: three-way geometry/deletion refresh, compatible order changes and a
 print("PASS: per-save/server/author journal, interrupted-write recovery and local incomplete drafts")
 print("PASS: correlated acknowledgements, other-author broadcasts and preservation of post-send edits")
 print("PASS: live node edits autosave before staging, restore on reopen and preview without mutating physical objects")
+print("PASS: revision fast paths, pending/conflict preservation, storage retries and same-revision reloads")

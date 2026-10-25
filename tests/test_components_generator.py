@@ -51,6 +51,27 @@ class ComponentsGeneratorTest(unittest.TestCase):
         self.assertEqual(self.geometry.face_geometry({"nodes": [{"x": 1, "y": 2}]}),
                          {"kind": "turn", "nodes": [{"x": 1, "y": 2}]})
 
+    def test_compound_turnout_recipes_use_three_turnout_costs(self):
+        profiles = self.entities.load_profiles(ROOT / "definitions/CostProfiles.json")
+        scripts = ROOT / "RailroaderWayman/Contents/mods/RailroaderWayman/42/media/scripts"
+        for definition in self.definitions:
+            with self.subTest(entity=definition["entity"]):
+                self.assertEqual(definition["costProfile"], "turnout")
+                self.assertEqual(definition["costMultiplier"], 3)
+                recipe = self.entities.EntityGenerator.recipe(definition, profiles["turnout"])
+                self.assertEqual(recipe["attributes"]["SkillRequired"], "Woodwork:7;MetalWelding:5")
+                self.assertEqual(recipe["attributes"]["xpAward"], "Woodwork:30;MetalWelding:15")
+                self.assertEqual(recipe["inputs"], [
+                    {"qty": 1, "item": "tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight]"},
+                    {"qty": 18, "item": "[Base.Plank]"},
+                    {"qty": 12, "item": "[Base.RailroadSpike]"},
+                    {"qty": 6, "item": "[Base.MetalBar]"},
+                ])
+                # Check the shipped recipe, not just the generator's in-memory result.
+                script = (scripts / (definition["entity"] + ".txt")).read_text()
+                generated = "\n".join(self.entities.EntityGenerator.recipe_lines(definition, profiles["turnout"]))
+                self.assertIn("        component CraftRecipe\n        {\n" + generated + "\n        }", script)
+
     def test_mixed_component_types_and_invalid_geometry(self):
         components = [{"type": "turn", "nodes": [{"x": 1, "y": 2, "z": 0}]},
                       {"type": "turnout", "at": {"x": 2, "y": 3},

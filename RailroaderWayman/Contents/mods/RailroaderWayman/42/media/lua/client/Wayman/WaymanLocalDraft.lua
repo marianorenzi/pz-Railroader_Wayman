@@ -114,11 +114,33 @@ function Drafts.preview(state)
     end
 end
 
-function Drafts.rebase(state, current)
-    if (current.revision or 0) < (state.base.revision or 0) then
+--- Reconciles a confirmed snapshot while preserving pending local work and acks.
+--- A local edit does not increment the authority's revision; equal revisions
+--- mean there is nothing external to merge, not that the draft is unmodified.
+---@param state table Local journal state for the current world/author.
+---@param current WaymanGraphData Confirmed authoritative graph.
+---@param force boolean? Reconcile after an explicit geometry discard at the same revision.
+function Drafts.rebase(state, current, force)
+    local revision, baseRevision = current.revision or 0, state.base.revision or 0
+    if revision == baseRevision and not force then
+        -- Accept can retry a previously failed journal write without re-merging.
+        -- Publication acknowledgements are still handled separately by onResult.
+        if state.storageError then Drafts.save(state) end
+        return
+    end
+    if revision < baseRevision then
         -- A global save can be older after a crash. Keep all versions for review.
         state.conflicts = {"world revision moved backwards; Reload required"}
         state.remote = GD.copy(current)
+        Drafts.save(state)
+        return
+    end
+    if not Drafts.changed(state) then
+        -- With no topology, staged geometry or raw node edits to preserve, a
+        -- newer snapshot can replace both copies without the quadratic merge.
+        -- Keep state.pending: a broadcast never acknowledges a publication.
+        state.base, state.draft = GD.copy(current), GD.copy(current)
+        state.remote, state.conflictVersions, state.conflicts = nil, nil, {}
         Drafts.save(state)
         return
     end
