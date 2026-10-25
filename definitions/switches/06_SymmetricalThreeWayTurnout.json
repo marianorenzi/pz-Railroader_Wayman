@@ -8,18 +8,21 @@
       "components": [
         {
           "type": "turnout",
+          "throatFacing": "N",
           "at": {"x": 7, "y": 0, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
         },
         {
           "type": "turnout",
+          "throatFacing": "W",
           "at": {"x": 0, "y": 6, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
         },
         {
           "type": "turnout",
+          "throatFacing": "S",
           "at": {"x": 7, "y": 17, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
@@ -75,18 +78,21 @@
       "components": [
         {
           "type": "turnout",
+          "throatFacing": "W",
           "at": {"x": 0, "y": 0, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
         },
         {
           "type": "turnout",
+          "throatFacing": "E",
           "at": {"x": 13, "y": 0, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
         },
         {
           "type": "turnout",
+          "throatFacing": "S",
           "at": {"x": 6, "y": 9, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
@@ -146,18 +152,21 @@
       "components": [
         {
           "type": "turnout",
+          "throatFacing": "N",
           "at": {"x": 0, "y": 0, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
         },
         {
           "type": "turnout",
+          "throatFacing": "E",
           "at": {"x": 9, "y": 6, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []
         },
         {
           "type": "turnout",
+          "throatFacing": "S",
           "at": {"x": 0, "y": 15, "z": 0},
           "switch": {"x": 0, "y": 0, "z": 0},
           "divergingNodes": []

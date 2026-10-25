@@ -134,7 +134,7 @@ end}
 RailroaderWaymanGraphDisplay = {refresh=function() end}
 WaymanLocalization = {ui=function(key) return key end}
 function require(name)
-    if name == "Wayman/WaymanGraphData" or name == "Wayman/WaymanRRGraph"
+    if name == "Wayman/WaymanGraphData" or name == "Wayman/WaymanRRGraph" or name == "Wayman/WaymanConnections"
         or name == "Wayman/WaymanEntityDescriptor" then return actualRequire(name) end
     return true
 end

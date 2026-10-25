@@ -6,6 +6,9 @@
   "faces": {
     "S": {
       "width": 11, "height": 5,
+      "throatFacing": "S",
+      "throughFacing": "NE",
+      "divergingFacing": "NW",
       "at": {"x": 6, "y": 5, "z": 0},
       "switch": {"x": 3, "y": 4, "z": 0},
       "divergingNodes": [],

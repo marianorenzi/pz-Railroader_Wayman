@@ -9,6 +9,9 @@
       "height": 6,
       "at": {"x": 3, "y": 4, "z": 0},
       "switch": {"x": 0, "y": 0, "z": 0},
+      "throatFacing": "N",
+      "throughFacing": "S",
+      "divergingFacing": "SE",
       "divergingNodes": [],
       "layers": [
         {
@@ -38,6 +41,9 @@
     "S": {
       "width": 8,
       "height": 6,
+      "throatFacing": "S",
+      "throughFacing": "N",
+      "divergingFacing": "NW",
       "at": {"x": 7, "y": 6, "z": 0},
       "switch": {"x": 4, "y": 5, "z": 0},
       "divergingNodes": [],
@@ -69,6 +75,9 @@
     "E": {
       "width": 7,
       "height": 4,
+      "throatFacing": "E",
+      "throughFacing": "W",
+      "divergingFacing": "SW",
       "at": {"x": 4, "y": 3, "z": 0},
       "switch": {"x": 6, "y": 0, "z": 0},
       "divergingNodes": [],
@@ -96,6 +105,9 @@
     "W": {
       "width": 8,
       "height": 4,
+      "throatFacing": "W",
+      "throughFacing": "E",
+      "divergingFacing": "NE",
       "at": {"x": 3, "y": 3, "z": 0},
       "switch": {"x": 0, "y": 0, "z": 0},
       "divergingNodes": [],

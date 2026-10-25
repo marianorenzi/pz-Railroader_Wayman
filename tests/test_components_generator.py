@@ -46,7 +46,7 @@ class ComponentsGeneratorTest(unittest.TestCase):
                     self.assertTrue(all(c["type"] == "turnout" for c in face["components"]))
         legacy = json.loads((ROOT / "definitions/switches/07_WyeTurnout.json").read_text())
         expected = {key: value for key, value in legacy["faces"]["S"].items()
-                    if key in self.geometry.POINT_KEYS}
+                    if key in self.geometry.POINT_KEYS + self.geometry.FACING_KEYS}
         self.assertEqual(catalog["WyeTurnout"]["S"], dict(expected, kind="turnout"))
         self.assertEqual(self.geometry.face_geometry({"nodes": [{"x": 1, "y": 2}]}),
                          {"kind": "turn", "nodes": [{"x": 1, "y": 2}]})
@@ -92,7 +92,7 @@ class ComponentsGeneratorTest(unittest.TestCase):
                 self.assertEqual(script.count("component CraftRecipe"), 1)
             self.assertEqual(self.definitions, originals, "generation mutated source metadata")
 
-    def test_runtime_catalog_cli(self):
+    def test_runtime_geometry_cli(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "WaymanEntityGeometry.lua"
             subprocess.run([sys.executable, "-B", str(SCRIPTS / "build_geometry.py"),
@@ -101,6 +101,35 @@ class ComponentsGeneratorTest(unittest.TestCase):
                             "--output", str(output)], check=True, capture_output=True)
             self.assertEqual(output.read_bytes(), (ROOT / "RailroaderWayman/Contents/mods/"
                              "RailroaderWayman/42/media/lua/shared/Wayman/WaymanEntityGeometry.lua").read_bytes())
+
+    def test_facing_contract_and_validation(self):
+        curve = {"nodes": [{"x": 1, "y": 2}], "nodesFacing": "N, SE"}
+        self.assertEqual(self.geometry.face_geometry(curve)["nodesFacing"], "N,SE")
+        for key in self.geometry.FACING_KEYS:
+            invalid = [None, [], 1, "", "north", "N,,S", "N,S,W"]
+            invalid += ["N"] if key == "nodesFacing" else ["N,S"]
+            for value in invalid:
+                with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                    self.geometry.facings({key: value})
+        for definition in self.definitions:
+            for face in definition["faces"].values():
+                self.assertEqual(sum(len(self.geometry.facings(c)) for c in face["components"]), 3)
+
+    def test_composition_preserves_curve_and_turnout_facings(self):
+        for path in (ROOT / "definitions/turns/00_Left45DegTurn.json",
+                     ROOT / "definitions/switches/00_Left45DegTurnout.json"):
+            source = json.loads(path.read_text())
+            with tempfile.TemporaryDirectory() as directory:
+                directory = Path(directory)
+                args = argparse.Namespace(name="facings", work_directory=directory / "work",
+                                          output=directory / "output", source_directory=directory)
+                with patch.object(self.tilesets, "crop_sprite",
+                                  return_value=Image.new("RGBA", (2,256))):
+                    self.tilesets.generate_pngs(args, {"tileWidth":2,"tileHeight":256,"sourceColumns":8}, [source])
+                generated = json.loads((args.output / "definitions/facings" / (source["entity"]+".json")).read_text())
+                for facing, face in source["faces"].items():
+                    self.assertEqual(self.geometry.face_geometry(generated["faces"][facing]),
+                                     self.geometry.face_geometry(face))
 
 
 if __name__ == "__main__":

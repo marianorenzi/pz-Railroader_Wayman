@@ -1,4 +1,10 @@
 {
+    "UI_Wayman_AvailableNoEdge": "Доступен / без ребра",
+    "UI_Wayman_DistanceTiles": "%1 тайл.",
+    "UI_Wayman_NodeInsideEdge": "Не является концом ребра",
+    "UI_Wayman_NodeNoFacing": "Не задано направление соединения",
+    "UI_Wayman_NodeFacingMismatch": "Несовместимое направление (требуется %1)",
+    "UI_Wayman_NodeFacingUsed": "Направление уже занято ребром (%1)",
     "UI_optionscreen_binding_RailroaderWayman": "Railroader: Wayman",
     "UI_optionscreen_binding_wayman_toggle_graph_editor": "Открыть/закрыть редактор графа",
     "UI_Wayman_WindowTitle": "Wayman — Редактор графа",

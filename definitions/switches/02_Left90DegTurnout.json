@@ -7,6 +7,9 @@
     "N": {
       "width": 5,
       "height": 6,
+      "throatFacing": "N",
+      "throughFacing": "S",
+      "divergingFacing": "E",
       "at": {"x": 3, "y": 5, "z": 0},
       "switch": {"x": 0, "y": 0, "z": 0},
       "divergingNodes": [],

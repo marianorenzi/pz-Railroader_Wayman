@@ -28,6 +28,7 @@ Events = {
     OnRailroaderRegisterTrack = { Add = function(handler) Events.registerTrackHandler = handler end },
     OnObjectAboutToBeRemoved = { Add = function(handler) Events.removeHandler = handler end },
     OnClientCommand = { Add = function(handler) Events.commandHandler = handler end },
+    LoadGridsquare = { Add = function(handler) Events.loadSquareHandler = handler end },
 }
 
 function isClient() return false end
@@ -72,6 +73,7 @@ end
 
 local function mockObject(entityName, facing, origin)
     local objectData = {}
+    local square = {}
     local masterOffset = {
         x = random(0, 8),
         y = random(0, 8),
@@ -90,7 +92,7 @@ local function mockObject(entityName, facing, origin)
     local object = {
         transmissions = 0,
         getMasterObject = function() return nil end,
-        getSquare = function() return {} end,
+        getSquare = function() return square end,
         getEntityScript = function()
             return { getName = function() return entityName end }
         end,
@@ -101,6 +103,9 @@ local function mockObject(entityName, facing, origin)
         getZ = function() return origin.z + masterOffset.z end,
         transmitModData = function(self) self.transmissions = self.transmissions + 1 end,
     }
+    square.getObjects = function()
+        return {size=function() return 1 end,get=function() return object end}
+    end
     return object, objectData
 end
 
@@ -211,6 +216,10 @@ for _, entry in ipairs(created) do
         if entry.geometry.kind == "turn" then
             local block = findBlock(owner, "nodes")
             assertTrue(block, "turn nodes block is missing")
+            local first, last = entry.geometry.nodesFacing:match("^([^,]+),([^,]+)$")
+            assertEqual(block.firstFacing, first, "first turn facing")
+            assertEqual(block.lastFacing, last, "last turn facing")
+            assertTrue(block.physicalId ~= nil, "physical parent is missing")
             assertOrigin(block.origin, entry.origin, owner .. ":nodes origin")
             assertEqual(#block.nodes, #entry.geometry.nodes, "turn node count")
             for index, node in ipairs(entry.geometry.nodes) do
@@ -222,6 +231,11 @@ for _, entry in ipairs(created) do
             local diverge = findBlock(owner, "diverge")
             local switch = findSwitch(owner)
             assertTrue(at and through and diverge, "turnout blocks are missing")
+            assertEqual(at.firstFacing, entry.geometry.throatFacing, "throat facing")
+            assertEqual(through.lastFacing, entry.geometry.throughFacing, "through facing")
+            assertEqual(diverge.lastFacing, entry.geometry.divergingFacing, "diverge facing")
+            assertTrue(at.physicalId == through.physicalId and at.physicalId == diverge.physicalId,
+                "turnout groups have different physical parents")
             assertTrue(switch, "turnout switch is missing")
             local expectedThrough = entry.geometry.throughNodes
             if not expectedThrough or #expectedThrough == 0 then
@@ -290,18 +304,37 @@ end
 result.edges.edge_for_removal_test = { removedBlock }
 removedBlock.invertNodes = true
 
+-- A pre-guide save is enriched on chunk load without rebuilding the edge.
+removedBlock.firstFacing, removedBlock.lastFacing, removedBlock.physicalId = nil, nil, nil
+replay.data.railroaderWayman.physicalId = nil
+local beforeUpgrade, originalNodes = result.revision, removedBlock.nodes
+Events.loadSquareHandler(replay.object:getSquare())
+tickHandlers[1]()
+assertEqual(result.revision, beforeUpgrade+1, "legacy metadata revision")
+assertTrue(removedBlock.nodes==originalNodes and removedBlock.invertNodes,
+    "metadata upgrade rebuilt/inverted geometry")
+assertEqual(removedBlock.firstFacing,"N","legacy first facing")
+assertEqual(removedBlock.lastFacing,"SE","legacy last facing")
+local unchanged = result.revision
+Events.loadSquareHandler(replay.object:getSquare())
+tickHandlers[1]()
+assertEqual(result.revision,unchanged,"upgraded chunk load repeated metadata work")
+
 -- A manual update finds the existing owner, rejects malformed client geometry
 -- in favor of server defaults, and preserves edge placement/inversion.
 local revisionBeforeRecovery = result.revision
 local ok, recoveredOwner = RailroaderWaymanEntityRuntime.SaveGeometry(replay.object, {
     id = removedOwner,
     nodes = { { x = "not-a-number", y = 999 } },
+    nodesFacing = "W,E", physicalId = "forged",
 }, "N")
 assertTrue(ok, "existing entity recovery failed")
 assertEqual(recoveredOwner, removedOwner, "existing owner changed during recovery")
 assertEqual(result.revision, revisionBeforeRecovery + 1, "recovery revision")
 assertEqual(#result.edges.edge_for_removal_test, 1, "recovery lost edge placement")
 assertTrue(result.edges.edge_for_removal_test[1].invertNodes, "recovery lost inversion")
+assertEqual(result.edges.edge_for_removal_test[1].firstFacing,"N","client changed first facing")
+assertEqual(result.edges.edge_for_removal_test[1].lastFacing,"SE","client changed last facing")
 assertRelativeNode(result.edges.edge_for_removal_test[1].nodes[1],
     replay.geometry.nodes[1], "server-default fallback")
 

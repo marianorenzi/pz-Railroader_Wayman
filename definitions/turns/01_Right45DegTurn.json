@@ -5,6 +5,7 @@
   "iconFace": "W",
   "faces": {
     "N": {
+      "nodesFacing": "N,SW",
       "width": 6, "height": 3,
       "nodes": [{"x": 5, "y": 1, "z": 0}],
       "layers": [{ "index": 0, "tiles": [
@@ -14,6 +15,7 @@
       ] }]
     },
     "S": {
+      "nodesFacing": "S,NE",
       "width": 6, "height": 4,
       "nodes": [{"x": 2, "y": 2, "z": 0}],
       "layers": [{ "index": 0, "tiles": [
@@ -24,6 +26,7 @@
       ] }]
     },
     "E": {
+      "nodesFacing": "E,NW",
       "width": 5, "height": 4,
       "nodes": [{"x": 4, "y": 3, "z": 0}],
       "layers": [{ "index": 0, "tiles": [
@@ -34,6 +37,7 @@
       ] }]
     },
     "W": {
+      "nodesFacing": "W,SE",
       "width": 6, "height": 4,
       "nodes": [{"x": 1, "y": 2, "z": 0}],
       "layers": [{ "index": 0, "tiles": [

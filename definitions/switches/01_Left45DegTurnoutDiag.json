@@ -7,6 +7,9 @@
     "N": {
       "width": 8,
       "height": 4,
+      "throatFacing": "NW",
+      "throughFacing": "SE",
+      "divergingFacing": "E",
       "at": {"x": 4, "y": 3, "z": 0},
       "switch": {"x": 5, "y": 0, "z": 0},
       "divergingNodes": [],
@@ -34,6 +37,9 @@
     "W": {
       "width": 11,
       "height": 6,
+      "throatFacing": "SW",
+      "throughFacing": "NE",
+      "divergingFacing": "N",
       "at": {"x": 5, "y": 4, "z": 0},
       "switch": {"x": 2, "y": 1, "z": 0},
       "divergingNodes": [],

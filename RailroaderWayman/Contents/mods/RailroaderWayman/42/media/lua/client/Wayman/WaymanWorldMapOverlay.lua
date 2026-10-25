@@ -66,19 +66,25 @@ local function drawPoint(map, x, y, color)
         1.00, color.r, color.g, color.b)
 end
 
---- Derives a stable muted RGB color from an edge's technical ID.
+local edgeColors = {}
+
+--- Keeps similar edge IDs apart in hue and caches their stable RGB colors.
 local function edgeColor(edgeId)
+    if edgeColors[edgeId] then return edgeColors[edgeId] end
     local hash = 0
-    for index = 1, #edgeId do hash = (hash * 33 + edgeId:byte(index)) % 360 end
-    local sector = math.floor(hash / 60)
-    local fraction = (hash % 60) / 60
-    local p, q = 0.25, 0.85 - 0.60 * fraction
+    for index = 1, #edgeId do hash = (hash * 33 + edgeId:byte(index)) % 2147483647 end
+    local hue = (hash * 0.618033988749895 % 1) * 6
+    local sector = math.floor(hue)
+    local fraction = hue - sector
+    local p, q, t = 0.15, 0.80 - 0.65 * fraction, 0.15 + 0.65 * fraction
     local colors = {
-        { 0.85, q, p }, { q, 0.85, p }, { p, 0.85, q },
-        { p, q, 0.85 }, { q, p, 0.85 }, { 0.85, p, q },
+        { 0.80, t, p }, { q, 0.80, p }, { p, 0.80, t },
+        { p, q, 0.80 }, { t, p, 0.80 }, { 0.80, p, q },
     }
     local value = colors[sector + 1]
-    return { r = value[1], g = value[2], b = value[3] }
+    local color = { r = value[1], g = value[2], b = value[3] }
+    edgeColors[edgeId] = color
+    return color
 end
 
 --- Projects an absolute world node into two-dimensional map coordinates.

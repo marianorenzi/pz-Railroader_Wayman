@@ -6,6 +6,7 @@ require "Wayman/WaymanEntityGeometry"
 require "Wayman/WaymanEntityDescriptor"
 require "Wayman/WaymanGraphData"
 require "Wayman/WaymanRRGraph"
+require "Wayman/WaymanConnections"
 
 RailroaderWaymanEntityRuntime = RailroaderWaymanEntityRuntime or {}
 
@@ -15,6 +16,7 @@ local pending = {}
 local GraphData = RailroaderWaymanGraphData
 local EntityDescriptor = RailroaderWaymanEntityDescriptor
 local RRGraph = RailroaderWaymanRRGraph
+local Connections = RailroaderWaymanConnections
 
 --- Writes a namespaced runtime diagnostic to the Project Zomboid log.
 local function log(message)
@@ -88,7 +90,7 @@ local registrationBuilders = {
 }
 
 --- Builds and appends one complete entity registration to staged graph data.
-local function registerGeometry(worldData, owner, geometry, origin)
+local function registerGeometry(worldData, owner, geometry, origin, physicalId)
     GraphData.ensure(worldData)
     local builder = registrationBuilders[geometry.kind]
     if not builder then return false, "unsupported geometry kind " .. tostring(geometry.kind) end
@@ -96,6 +98,7 @@ local function registerGeometry(worldData, owner, geometry, origin)
     if not registration then return false, reason end
 
     for _, block in ipairs(registration.blocks) do
+        Connections.decorate(block, geometry, physicalId)
         table.insert(worldData.availableNodes, block)
     end
     if registration.switch then
@@ -296,20 +299,22 @@ local function effectiveGeometry(defaults, supplied)
     supplied = type(supplied) == "table" and supplied or {}
     local builder = effectiveGeometryBuilders[defaults.kind]
     if not builder then return nil, "unsupported geometry kind " .. tostring(defaults.kind) end
-    return builder(defaults, supplied)
+    local geometry = builder(defaults, supplied)
+    for _, field in ipairs(Connections.facingFields) do geometry[field] = defaults[field] end
+    return geometry
 end
 
 --- Reports whether an owner is represented anywhere in the global graph state.
 ---@param worldData table
 ---@param owner string?
----@return boolean
+---@return table|boolean
 local function ownerExists(worldData, owner)
     if not owner then return false end
-    for _, block in ipairs(worldData.availableNodes) do if block.owner == owner then return true end end
-    for _, switch in ipairs(worldData.switches) do if switch.owner == owner then return true end end
+    for _, block in ipairs(worldData.availableNodes) do if block.owner == owner then return block end end
     for _, blocks in pairs(worldData.edges) do
-        for _, block in ipairs(blocks) do if block.owner == owner then return true end end
+        for _, block in ipairs(blocks) do if block.owner == owner then return block end end
     end
+    for _, switch in ipairs(worldData.switches) do if switch.owner == owner then return true end end
     return false
 end
 
@@ -431,7 +436,8 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
     -- the entity's prior edge position/inversion and switch legs.
     local geometry, geometryReason = effectiveGeometry(entity.defaults, submittedData)
     if not geometry then return false, geometryReason end
-    local registered, registerReason = registerGeometry(staged, owner, geometry, entity.origin)
+    local registered, registerReason = registerGeometry(staged, owner, geometry, entity.origin,
+        Connections.physicalId(entity.entityName, entity.origin))
     if not registered then
         log("geometry update skipped: " .. tostring(registerReason))
         return false, registerReason
@@ -462,7 +468,7 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
 
     -- Persist relative geometry on the physical entity so it can be recovered
     -- independently of loaded squares and reconstructed with a fresh origin.
-    local saved = { id = owner }
+    local saved = { id = owner, physicalId = Connections.physicalId(entity.entityName,entity.origin) }
     if geometry.kind == "turn" then
         saved.nodes = GraphData.copy(submittedData.nodes)
     else
@@ -496,8 +502,26 @@ local function initialize(object, requestedFacing)
     end
 
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
+    local upgraded = false
     for _, entity in ipairs(instances) do
-        if ownerExists(worldData, entity.data.id) then
+        local existing = ownerExists(worldData, entity.data.id)
+        if existing then
+            -- Enrich pre-guide saves once the real parent is loaded. Existing
+            -- coordinates, IDs, edge membership and inversion remain untouched.
+            if type(existing) == "table" and not existing.physicalId then
+                local physicalId = Connections.physicalId(entity.entityName, entity.origin)
+                local function enrich(block)
+                    if block.owner == entity.data.id then Connections.decorate(block,entity.defaults,physicalId) end
+                end
+                for _, block in ipairs(worldData.availableNodes) do enrich(block) end
+                for _, blocks in pairs(worldData.edges) do
+                    for _, block in ipairs(blocks) do enrich(block) end
+                end
+                entity.data.physicalId = physicalId
+                EntityDescriptor.storeData(entity,entity.data)
+                if isServer() then entity.master:transmitModData() end
+                upgraded = true
+            end
             if not isServer() and RailroaderWaymanEntityDebug then
                 RailroaderWaymanEntityDebug.capture(entity, entity.data.id)
             end
@@ -506,6 +530,10 @@ local function initialize(object, requestedFacing)
                 entity.master, entity.data, entity.facing, entity.componentIndex)
             if not ok then return false, err end
         end
+    end
+    if upgraded then
+        worldData.revision = worldData.revision+1
+        transmitWorldData()
     end
     return true
 end
@@ -594,7 +622,8 @@ function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision, geom
             if not geometry then return false, geometryReason end
             local placement = capturePlacement(canonical, owner)
             removeOwner(owner, true, true, canonical)
-            local ok, whyRegister = registerGeometry(canonical, owner, geometry, entity.origin)
+            local ok, whyRegister = registerGeometry(canonical, owner, geometry, entity.origin,
+                Connections.physicalId(entity.entityName, entity.origin))
             if not ok then return false, whyRegister end
             restorePlacement(canonical, owner, placement)
             changes[#changes + 1] = {entity=entity, owner=owner, geometry=geometry, data=edit.modData}
@@ -621,7 +650,8 @@ function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision, geom
     worldData.revision = normalized.revision
     worldData.rrSync = nil
     for _, change in ipairs(changes) do
-        local saved = {id=change.owner}
+        local saved = {id=change.owner,
+            physicalId=Connections.physicalId(change.entity.entityName,change.entity.origin)}
         for _, field in ipairs(change.geometry.kind == "turn" and {"nodes"}
             or {"at","switch","throughNodes","divergingNodes"}) do saved[field] = GraphData.copy(change.data[field]) end
         EntityDescriptor.storeData(change.entity, saved)
@@ -749,6 +779,27 @@ function RailroaderWaymanEntityRuntime.OnCreate(params)
 end
 
 Events.OnTick.Add(initializePending)
+if Events.LoadGridsquare then
+    Events.LoadGridsquare.Add(function(square)
+        if isClient() then return end
+        local objects = square:getObjects()
+        for i=0,objects:size()-1 do
+            local object = objects:get(i)
+            local script = object:getEntityScript()
+            if script and RailroaderWaymanEntityGeometry[script:getName()] then
+                local master = EntityDescriptor.getMaster(object)
+                if master:getSquare()==square then
+                    local data = master:getModData()[OBJECT_DATA_KEY] or {}
+                    local needsMetadata = data.id and not data.physicalId
+                    for _, component in ipairs(data.components or {}) do
+                        if component.id and not component.physicalId then needsMetadata=true end
+                    end
+                    if needsMetadata then pending[#pending+1] = {object=master} end
+                end
+            end
+        end
+    end)
+end
 if Events.OnRailroaderRegisterTrack then
     Events.OnRailroaderRegisterTrack.Add(registerPersistedRRGraph)
 else

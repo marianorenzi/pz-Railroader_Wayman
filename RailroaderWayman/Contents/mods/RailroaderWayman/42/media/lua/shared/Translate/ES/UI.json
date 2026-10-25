@@ -1,4 +1,10 @@
 {
+    "UI_Wayman_AvailableNoEdge": "Disponible / sin edge",
+    "UI_Wayman_DistanceTiles": "%1 tiles",
+    "UI_Wayman_NodeInsideEdge": "No es un extremo del edge",
+    "UI_Wayman_NodeNoFacing": "Sin sentido de conexión declarado",
+    "UI_Wayman_NodeFacingMismatch": "Sentido incompatible (requiere %1)",
+    "UI_Wayman_NodeFacingUsed": "Sentido ya ocupado por el edge (%1)",
     "UI_optionscreen_binding_RailroaderWayman": "Railroader: Wayman",
     "UI_optionscreen_binding_wayman_toggle_graph_editor": "Abrir/cerrar editor de grafo",
     "UI_Wayman_WindowTitle": "Wayman — Grafo",
