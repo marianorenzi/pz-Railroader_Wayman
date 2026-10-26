@@ -87,10 +87,25 @@ local function draw()
     entries,texts={},{}
     ui:prerender();ui:render()
 end
+local function tile(x,y,z)
+    local found
+    for _, entry in ipairs(entries) do
+        if entry.x==x and entry.y==y and entry.z==(z or 0) then
+            assert(not found,"construction submitted the same highlighted tile twice")
+            found=entry
+        end
+    end
+    return assert(found,"missing highlighted tile at "..x..","..y)
+end
+local function white(x,y,z)
+    local entry=tile(x,y,z)
+    assert(entry.r==1 and entry.g==1 and entry.b==1,"node highlight was obscured by a guide")
+end
 cursor:render(100,100,0,{})
 assert(ui,"lowercase cursor facing did not create construction guides")
 draw()
-assert(#entries==16 and #texts==1 and texts[1].text=="turnout_1:at (edge_1) — 1000 tiles")
+assert(#entries==18 and #texts==1 and texts[1].text=="turnout_1:at (edge_1) — 1000 tiles")
+white(106,105);white(106,1105)
 local labelX,labelY=texts[1].x,texts[1].y
 assert(entries[1].x==106 and entries[1].y==106 and entries[1].g==1)
 assert(entries[8].y==113 and entries[9].x==105 and entries[9].y==104 and entries[9].r==1)
@@ -98,10 +113,11 @@ for _=1,500 do cursor:render(100,100,0,{}) end
 assert(builds==1 and queries==2 and validations==501 and cursor.isValid==validity,
     "stationary cursor repeated queries or changed vanilla validity")
 visible=true;draw();assert(#entries==0 and #texts==0)
-visible=false;draw();assert(#entries==16 and #texts==1)
+visible=false;draw();assert(#entries==18 and #texts==1)
 for _,length in ipairs({5,10}) do
     G.visualLength=length;cursor:render(100,100,0,{});draw()
-    assert(#entries==length*2 and entries[length].y==105+length)
+    assert(#entries==length*2+2 and entries[length].y==105+length)
+    white(106,105);white(106,1105)
     assert(texts[1].x==labelX and texts[1].y==labelY,
         "changing guide length moved the label away from the ghost")
 end
@@ -123,8 +139,9 @@ cursor:render(100,100,0,{});draw();assert(builds==4 and #texts==1)
 -- A near incompatible node blocks the far compatible one.
 world.availableNodes[#world.availableNodes+1]={blockId="wall",nodes={{x=106,y=107}},firstFacing="S"}
 world.revision=3;cursor:render(100,100,0,{});draw()
-assert(#entries==10 and entries[1].r==1 and entries[2].y==107 and #texts==1,
+assert(#entries==11 and entries[1].r==1 and #texts==1,
     "red guide continued past the first occupied coordinate")
+white(106,105);white(106,107)
 assert(texts[1].text=="wall (Disponible / sin edge) — 2 tiles — Sentido incompatible (requiere N)")
 -- Shorten both colors at nearby cardinal/diagonal nodes, including an adjacent tile.
 local wall=world.availableNodes[2]
@@ -134,8 +151,9 @@ for _,compatible in ipairs({true,false}) do
     wall.firstFacing=compatible and "N" or "S"
     diagonal.firstFacing=compatible and "SE" or "NW"
     world.revision=world.revision+1;cursor:render(100,100,0,{});draw()
-    assert(#entries==3 and entries[2].y==107 and entries[3].x==105 and entries[3].y==104,
+    assert(#entries==4,
         "nearby nodes did not stop cardinal and diagonal guides")
+    white(106,105);white(106,107);white(105,104)
     assert(#texts==2)
     if compatible then
         assert(texts[1].y==labelY,"truncating the guide moved its label to the target")
@@ -145,8 +163,8 @@ for _,compatible in ipairs({true,false}) do
         assert(texts[1].text=="wall (Disponible / sin edge) — 2 tiles — Sentido incompatible (requiere N)")
         assert(texts[2].text=="diagonal (Disponible / sin edge) — 1 tiles — Sentido incompatible (requiere SE)")
     end
-    assert((compatible and entries[1].g==1 and entries[3].g==1)
-        or (not compatible and entries[1].r==1 and entries[3].r==1))
+    assert((compatible and tile(106,106).g==1)
+        or (not compatible and tile(106,106).r==1))
 end
 -- Correct facing alone is insufficient inside an edge; labels explain the blocker.
 table.remove(world.availableNodes,2)
@@ -171,6 +189,69 @@ wall.firstFacing=nil
 world.revision=world.revision+1;cursor:render(100,100,0,{});draw()
 assert(entries[1].r==1 and texts[1].text=="wall (edge_blocked) — 2 tiles — Sin sentido de conexión declarado")
 cursor:render(101,100,0,{});draw();assert(#texts==0,"stale blocker label survived without a node")
+-- Public RR/addon endpoints use the turnout selector's filter, not saved drafts.
+local catalogCalls,nodeCalls=0,0
+local externalY=107
+RR={API={
+    edges=function(net,out)
+        assert(net=="main");catalogCalls=catalogCalls+1
+        out[1]={id="main"};out[2]={id="other:branch",prefix="other"}
+        out[3]={id="wayman:copy",prefix="wayman"}
+        return out
+    end,
+    edgeNodes=function(id,net,out)
+        assert(net=="main");nodeCalls=nodeCalls+1
+        assert(id~="wayman:copy","guides requested the published Wayman duplicate")
+        if id=="main" then
+            out[1]={x=300,y=300};out[2]={x=106,y=externalY,name="station",open=false}
+        else
+            out[1]={x=104,y=103};out[2]={x=500,y=500}
+        end
+        return out
+    end,
+}}
+world={revision=20}
+cursor:render(100,100,0,{});draw()
+assert(#texts==2 and texts[1].text=="RR:station (main) — 2 tiles")
+assert(texts[2].text=="RR:1 (other:branch) — 2 tiles")
+assert(tile(106,106).g==1 and tile(105,104).g==1)
+white(106,105);white(106,107);white(104,103)
+local builtBefore,queriedBefore=builds,queries
+local callsBefore=catalogCalls
+for _=1,500 do cursor:render(100,100,0,{}) end
+assert(builds==builtBefore and queries==queriedBefore and catalogCalls==callsBefore,
+    "stationary render repeated public catalog reads")
+for _=1,60 do Events.OnTick.fire() end
+cursor:render(100,100,0,{})
+assert(catalogCalls==callsBefore+1 and builds==builtBefore and queries==queriedBefore,
+    "unchanged external poll invalidated the spatial index")
+externalY=109
+for _=1,60 do Events.OnTick.fire() end
+cursor:render(100,100,0,{});draw()
+assert(builds==builtBefore+1 and texts[1].text=="RR:station (main) — 4 tiles")
+white(106,109)
+RR=nil
+for _=1,60 do Events.OnTick.fire() end
+cursor:render(100,100,0,{});draw()
+assert(#texts==0,"unavailable external catalog retained obsolete targets")
+-- All physical ghost nodes are white, even inside a branch without its own exit.
+name,facing="WyeTurnout","S"
+cursor:render(100,100,0,{});draw()
+white(106,105);white(106,104);white(106,103)
+-- Coincident component nodes are submitted once; distinct ones all survive.
+name,facing="SymmetricalCompactThreeWayTurnout","E"
+cursor:render(100,100,0,{});draw()
+white(103,105)
+assert(#entries==25)
+name,facing="SymmetricalThreeWayTurnout","S"
+cursor:render(100,100,0,{});draw()
+white(102,103);white(113,103);white(109,110)
+white(109,109);white(109,107)
+-- A target exactly at an exit remains ignored until the geometry stage.
+name,facing="Left45DegTurn","S"
+world={revision=21,availableNodes={{blockId="coincident",nodes={{x=106,y=105}},firstFacing="N"}}}
+cursor:render(100,100,0,{});draw()
+assert(#texts==0);white(106,105)
 -- Labels at a shared point remain separate and do not overlap.
 H.replaceGroup("labels",{},{{x=106,y=125,z=0,text="one"},{x=106,y=125,z=0,text="two"}})
 draw();assert(#texts==2 and math.abs(texts[1].y-texts[2].y)>=14)
@@ -188,3 +269,5 @@ print("PASS: green/red guides stop on nearby cardinal/diagonal nodes, including 
 print("PASS: labels stay at the ghost's guide start when length or target distance changes")
 print("PASS: red guide labels identify blockers and explain facing, missing metadata and internal edge nodes")
 print("PASS: endpoint guide color and occupied-facing reason update from the runtime edge direction")
+print("PASS: white ghost/internal/component nodes and unlimited targets take precedence over guide tiles")
+print("PASS: RR/addon endpoint labels, all-direction compatibility and active-only cached public polling")

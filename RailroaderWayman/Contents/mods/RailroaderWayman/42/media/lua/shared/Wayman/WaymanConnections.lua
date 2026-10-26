@@ -40,6 +40,7 @@
 ---@field lastFacing WaymanConnectionFacing? Declared facing of the last physical node, if applicable.
 ---@field edgeEndpoint boolean? True only for the first/last candidate of an entire edge.
 ---@field usedFacing WaymanConnectionFacing? Direction occupied by the edge's distinct neighbor.
+---@field external boolean? Public RR/addon endpoint, compatible from all eight directions.
 
 --- One occupied coordinate, with all coincident candidates in its numeric entries.
 ---@class WaymanConnectionPoint
@@ -122,6 +123,26 @@ function Connections.exits(geometry, origin)
     return exits
 end
 
+--- Collects all ghost nodes, including internal branch/component nodes.
+--- Multiple logical nodes may share a tile; the highlight adapter deduplicates it.
+---@param geometry WaymanConnectionGeometry
+---@param origin WaymanNode
+---@return WaymanNode[]
+function Connections.nodes(geometry, origin)
+    local nodes = {}
+    local function add(node)
+        if node then nodes[#nodes+1] = {x=origin.x+node.x,y=origin.y+node.y,
+            z=(origin.z or 0)+(node.z or 0)} end
+    end
+    for _, part in ipairs(geometry.components or {geometry}) do
+        add(part.at)
+        for _, field in ipairs({"nodes","throughNodes","divergingNodes"}) do
+            for _, node in ipairs(part[field] or {}) do add(node) end
+        end
+    end
+    return nodes
+end
+
 --- Maps XY onto a line key (cross) and an increasing coordinate along that line.
 --- The four line families cover opposite pairs of the eight compass directions:
 ---   axis 1: x constant,   position y (N/S)
@@ -150,6 +171,13 @@ local function samePoint(a,b)
     return a.x==b.x and a.y==b.y and a.z==b.z
 end
 
+--- Stable ties include the edge because external names/indices are not global IDs.
+local function candidateBefore(a,b)
+    if a.nodeId~=b.nodeId then return a.nodeId<b.nodeId end
+    if a.nodeIndex~=b.nodeIndex then return a.nodeIndex<b.nodeIndex end
+    return (a.edgeId or "")<(b.edgeId or "")
+end
+
 --- Marks an edge terminal and derives the facing occupied by its own edge.
 --- Cross product zero means collinear; positive dot product means the neighbor
 --- lies ahead in that direction. A missing neighbor or different Z leaves the
@@ -173,14 +201,33 @@ end
 --- facings: they still stop a ray. Coincident nodes share a point but retain
 --- separate candidates, so any eligible candidate at that point can connect.
 --- The caller owns caching/invalidation; construction guides reuse this result
---- until the confirmed world table or its revision changes.
+--- until the confirmed world or copied external endpoints change.
 ---@param world WaymanGraphData Confirmed graph; absent collections are treated as empty.
+---@param externalNodes WaymanConnectionCandidate[]? Copied public RR/addon endpoints.
 ---@return WaymanConnectionIndex index Four sorted line families, separated by Z.
-function Connections.index(world)
+function Connections.index(world, externalNodes)
     local index = {{},{},{},{}}
     -- Deduplicate coordinates across blocks and line families. Every family
     -- references the same point/candidates, including endpoint flags set later.
     local points = {}
+    local function addCandidate(candidate)
+        local x,y,z = candidate.x,candidate.y,candidate.z
+        points[z] = points[z] or {}
+        points[z][x] = points[z][x] or {}
+        local point = points[z][x][y]
+        if not point then
+            point = {x=x,y=y,z=z}
+            points[z][x][y] = point
+            for axis=1,4 do
+                local cross = linePosition(axis,x,y)
+                index[axis][z] = index[axis][z] or {}
+                local plane = index[axis][z]
+                plane[cross] = plane[cross] or {}
+                plane[cross][#plane[cross]+1] = point
+            end
+        end
+        point[#point+1] = candidate
+    end
     --- Adds candidates in edge traversal order while preserving physical indices.
     ---@param block WaymanNodeBlock
     ---@param edgeId string? Nil means the block is available, outside any edge.
@@ -194,27 +241,13 @@ function Connections.index(world)
             local node = nodes[nodeIndex]
             local x, y, z = (origin.x or 0)+node.x, (origin.y or 0)+node.y,
                 (origin.z or 0)+(node.z or 0)
-            points[z] = points[z] or {}
-            points[z][x] = points[z][x] or {}
-            local point = points[z][x][y]
-            if not point then
-                point = {x=x,y=y,z=z}
-                points[z][x][y] = point
-                for axis=1,4 do
-                    local cross = linePosition(axis,x,y)
-                    index[axis][z] = index[axis][z] or {}
-                    local plane = index[axis][z]
-                    plane[cross] = plane[cross] or {}
-                    plane[cross][#plane[cross]+1] = point
-                end
-            end
             local candidate = {
                 nodeId=block.blockId, nodeIndex=nodeIndex, edgeId=edgeId,
                 physicalId=block.physicalId, x=x,y=y,z=z,
                 firstFacing=nodeIndex==1 and block.firstFacing or nil,
                 lastFacing=nodeIndex==#block.nodes and block.lastFacing or nil,
             }
-            point[#point+1] = candidate
+            addCandidate(candidate)
             if ends then
                 -- Keep the first/last candidates and their inward neighbors.
                 -- Coincident coordinates do not consume a direction or hide the
@@ -236,6 +269,7 @@ function Connections.index(world)
             markEndpoint(ends.last,ends.prev)
         end
     end
+    for _, candidate in ipairs(externalNodes or {}) do addCandidate(candidate) end
     -- A ray only needs its one sorted line. Sorting happens during index build;
     -- moving the cursor then uses binary search instead of revisiting the graph.
     for axis, planes in ipairs(index) do
@@ -292,7 +326,10 @@ function Connections.find(index, origin, facing, excludedPhysicalId)
                 -- An available node or entire-edge endpoint must expose the
                 -- opposite physical facing, and that facing must remain free.
                 -- Internal edge nodes block the ray regardless of their facing.
-                if candidate.edgeId and not candidate.edgeEndpoint then
+                if candidate.external then
+                    -- RR/addon endpoints deliberately accept every approach:
+                    -- no facing, open flag or switch-occupancy validation.
+                elseif candidate.edgeId and not candidate.edgeEndpoint then
                     reason = "UI_Wayman_NodeInsideEdge"
                 elseif not candidate.firstFacing and not candidate.lastFacing then
                     reason = "UI_Wayman_NodeNoFacing"
@@ -303,11 +340,10 @@ function Connections.find(index, origin, facing, excludedPhysicalId)
                 end
                 local compatible = reason==nil
                 -- Prefer any compatible candidate at this point. Within the
-                -- same compatibility class, block ID then physical node index
+                -- same compatibility class, node ID, physical node index and edge
                 -- provide deterministic labels, independent of insertion order.
                 if not best or (compatible and not bestCompatible)
-                    or (compatible==bestCompatible and (candidate.nodeId<best.nodeId
-                        or (candidate.nodeId==best.nodeId and candidate.nodeIndex<best.nodeIndex))) then
+                    or (compatible==bestCompatible and candidateBefore(candidate,best)) then
                     best, bestReason, bestCompatible = candidate, reason, compatible
                 end
             end

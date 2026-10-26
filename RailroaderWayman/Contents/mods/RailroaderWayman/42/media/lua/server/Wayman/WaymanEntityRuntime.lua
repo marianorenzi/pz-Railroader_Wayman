@@ -23,6 +23,22 @@ local function log(message)
     print("[RailroaderWayman] EntityRuntime: " .. message)
 end
 
+--- Logs committed relative geometry, including defaults omitted from overrides.
+--- Guard serialization as well as output: normal saves pay no JSON cost.
+local function logSavedGeometry(entity, owner, geometry, revision)
+    if not (getDebug and getDebug()) then return end
+    local json, reason = GraphData.worldDataToJSON({
+        id=owner, entityName=entity.entityName, facing=entity.facing,
+        origin=entity.origin, componentIndex=entity.componentIndex,
+        revision=revision, geometry=geometry,
+    })
+    if json then
+        log("GEOMETRY_SAVED " .. json)
+    else
+        log("GEOMETRY_SAVED_ERROR " .. tostring(reason))
+    end
+end
+
 --- Allocates a persistent turn or turnout owner ID from global counters.
 local function nextId(kind, worldData)
     worldData = GraphData.ensure(worldData or ModData.getOrCreate(WORLD_DATA_KEY))
@@ -482,8 +498,8 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
         RailroaderWaymanEntityDebug.capture(entity, owner)
     end
     if isServer() then entity.master:transmitModData() end
-    log("saved entity modData for " .. tostring(owner) .. ": " .. tostring(saved))
     transmitWorldData()
+    logSavedGeometry(entity, owner, geometry, worldData.revision)
     log("saved geometry for " .. tostring(owner) .. " from " .. tostring(entity.entityName)
         .. " facing " .. tostring(entity.facing)
         .. " at revision " .. tostring(worldData.revision))
@@ -659,6 +675,7 @@ function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision, geom
         if not isServer() and RailroaderWaymanEntityDebug then
             RailroaderWaymanEntityDebug.capture(change.entity, change.owner)
         end
+        logSavedGeometry(change.entity, change.owner, change.geometry, worldData.revision)
     end
     -- GlobalModData is written by a world save in SP and on the server.
     -- Request it after the complete commit, before acknowledging publication.

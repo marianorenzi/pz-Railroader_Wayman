@@ -62,10 +62,8 @@ function RRGraph.isOwnId(id)
     return type(id) == "string" and id:sub(1, #OWN_PREFIX) == OWN_PREFIX
 end
 
---- Copies public catalog IDs immediately; RR may reuse its returned row tables.
----@return table<string,boolean>? edges Set of external IDs, excluding Wayman's contribution.
----@return string? reason
-function RRGraph.externalEdges()
+--- Reads the same public catalog for turnout selectors and construction guides.
+local function externalCatalog()
     local api = RR and RR.API
     if not api or type(api.edges) ~= "function" then
         return nil, "Railroader edge catalog is unavailable"
@@ -74,11 +72,55 @@ function RRGraph.externalEdges()
     if not ok or type(edges) ~= "table" then
         return nil, "Railroader edge catalog is unavailable"
     end
+    return edges
+end
+
+local function isExternalEdge(edge)
+    return type(edge) == "table" and type(edge.id) == "string"
+        and edge.prefix ~= RRGraph.PREFIX and not RRGraph.isOwnId(edge.id)
+end
+
+--- Copies public catalog IDs immediately; RR may reuse its returned row tables.
+---@return table<string,boolean>? edges Set of external IDs, excluding Wayman's contribution.
+---@return string? reason
+function RRGraph.externalEdges()
+    local edges, reason = externalCatalog()
+    if not edges then return nil, reason end
     local result = {}
     for _, edge in ipairs(edges) do
-        if type(edge) == "table" and type(edge.id) == "string"
-            and edge.prefix ~= RRGraph.PREFIX and not RRGraph.isOwnId(edge.id) then
-            result[edge.id] = true
+        if isExternalEdge(edge) then result[edge.id] = true end
+    end
+    return result
+end
+
+--- Copies only external edge endpoints, retaining their original node indices.
+--- Closed public edges have no endpoints; never inspect their internal halves.
+--- Current RR exposes coordinates only. Prefer names if a later API supplies them.
+---@return WaymanConnectionCandidate[]? endpoints
+---@return string? reason
+function RRGraph.externalEndpoints()
+    local edges, reason = externalCatalog()
+    if not edges then return nil, reason end
+    local ids = {}
+    for _, edge in ipairs(edges) do
+        if isExternalEdge(edge) and not edge.closed then ids[#ids+1] = edge.id end
+    end
+    table.sort(ids)
+    local result = {}
+    local api = RR and RR.API
+    if not api or type(api.edgeNodes) ~= "function" then return result end
+    for _, id in ipairs(ids) do
+        local ok, nodes = pcall(api.edgeNodes,id,"main",{})
+        if ok and type(nodes) == "table" then
+            local function add(i)
+                local node = nodes[i]
+                if type(node) ~= "table" or type(node.x) ~= "number" or type(node.y) ~= "number" then return end
+                local name = type(node.name)=="string" and node.name~="" and node.name or tostring(i)
+                result[#result+1] = {nodeId="RR:"..name,nodeIndex=i,edgeId=id,
+                    x=node.x,y=node.y,z=node.z or 0,external=true}
+            end
+            if #nodes>0 then add(1) end
+            if #nodes>1 then add(#nodes) end
         end
     end
     return result

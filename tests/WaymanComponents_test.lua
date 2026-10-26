@@ -89,10 +89,17 @@ for _, name in ipairs({"SymmetricalCompactThreeWayTurnout", "SymmetricalThreeWay
             for _, group in ipairs({"at", "through", "diverge"}) do
                 local entry = assert(block(owner, group))
                 assert(entry.blockId == owner..":"..group)
-                assert(entry.nodes[1].x == geometry.components[i].at.x)
-                local absolute = GD.getAbsoluteNode(entry.origin, entry.nodes[1])
-                assert(absolute.x == origin.x + geometry.components[i].at.x)
-                assert(absolute.y == origin.y + geometry.components[i].at.y and absolute.z == 1)
+                local componentGeometry = geometry.components[i]
+                local expected = group == "through" and componentGeometry.throughNodes
+                    or group == "diverge" and componentGeometry.divergingNodes or nil
+                if not expected or #expected == 0 then expected = {componentGeometry.at} end
+                assert(#entry.nodes == #expected)
+                for index, node in ipairs(expected) do
+                    assert(entry.nodes[index].x == node.x and entry.nodes[index].y == node.y)
+                    local absolute = GD.getAbsoluteNode(entry.origin, entry.nodes[index])
+                    assert(absolute.x == origin.x + node.x)
+                    assert(absolute.y == origin.y + node.y and absolute.z == 1)
+                end
             end
             local logicalSwitch = assert(switch(owner))
             assert(logicalSwitch.place.x == geometry.components[i].switch.x)

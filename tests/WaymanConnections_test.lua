@@ -39,6 +39,16 @@ for facing,d in pairs(C.directions) do
     assert(blockedA.nodeId=="a" and blockedB.nodeId=="a","blocker label depends on index order")
     a.physicalId,b.physicalId="self","self"
     assert(find({a,b,target},facing,nil,"self").nodeId=="target")
+    -- External endpoints accept every approach, regardless of open/facing/edge use.
+    local external={nodeId="RR:1",nodeIndex=1,edgeId="main",external=true,
+        x=x,y=y,z=0,firstFacing=facing,usedFacing=d[3]}
+    assert(C.find(C.index({}, {external}),origin,facing)==external)
+    local closer=block("wall",100+d[1]*2,100+d[2]*2,facing)
+    local hit,_,node=C.find(C.index({availableNodes={closer}},{external}),origin,facing)
+    assert(not hit and node.nodeId=="wall","external target bypassed a closer blocker")
+    local other={nodeId="RR:1",nodeIndex=1,edgeId="addon:edge",external=true,x=x,y=y,z=0}
+    assert(C.find(C.index({},{external,other}),origin,facing).edgeId=="addon:edge")
+    assert(C.find(C.index({},{other,external}),origin,facing).edgeId=="addon:edge")
 end
 
 -- Edge endpoints follow block order/inversion; physical facing associations stay fixed.
