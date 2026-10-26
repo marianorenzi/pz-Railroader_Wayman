@@ -245,8 +245,8 @@ white(103,105)
 assert(#entries==25)
 name,facing="SymmetricalThreeWayTurnout","S"
 cursor:render(100,100,0,{});draw()
-white(102,103);white(113,103);white(109,110)
-white(109,109);white(109,107)
+white(101,102);white(112,102);white(108,109)
+white(108,108);white(108,106)
 -- A target exactly at an exit remains ignored until the geometry stage.
 name,facing="Left45DegTurn","S"
 world={revision=21,availableNodes={{blockId="coincident",nodes={{x=106,y=105}},firstFacing="N"}}}

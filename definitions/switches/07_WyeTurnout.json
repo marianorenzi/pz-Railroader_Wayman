@@ -32,9 +32,9 @@
           "tiles": [
             [null, null, null, null, null, null, null, null, null, null, null],
             [null, null, null, null, "industry_railroad_04_4", "industry_railroad_04_7", null, null, null, null, null],
-            [null, null, null, null, null, "industry_railroad_04_9", null, null, null, null, null],
+            [null, null, null, null, null, "industry_railroad_04_9", "industry_railroad_04_11", null, null, null, null],
             [null, null, null, null, "industry_railroad_04_8", "industry_railroad_04_10", "industry_railroad_04_12", null, null, null, null],
-            [null, null, null, null, null, null, null, null, null, null, null]
+            [null, null, null, null, null, null, "industry_railroad_03_48", null, null, null, null]
           ]
         }
       ]

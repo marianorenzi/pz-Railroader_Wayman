@@ -39,7 +39,7 @@
             ["industry_railroad_01_7", "industry_railroad_01_7", "industry_railroad_03_34", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
             [null, null, "industry_railroad_04_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
             ["industry_railroad_01_7", "industry_railroad_01_7", "industry_railroad_01_7", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
-            [null, "industry_railroad_04_0", "industry_railroad_04_3", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
+            [null, "industry_railroad_04_48", "industry_railroad_04_3", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
             [null, null, "industry_railroad_04_5", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
             [null, null, "industry_railroad_05_52", "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"]
           ]
@@ -50,7 +50,7 @@
             [null, null, null, null, null, null],
             [null, null, null, "industry_railroad_03_29", "industry_railroad_01_1", "industry_railroad_01_2"],
             ["industry_railroad_04_47", "industry_railroad_04_46", null, "industry_railroad_03_38", "industry_railroad_03_28", "industry_railroad_03_30"],
-            [null, null, null, "industry_railroad_03_27", "industry_railroad_03_24", "industry_railroad_03_27"],
+            [null, null, null, null, "industry_railroad_03_24", "industry_railroad_03_27"],
             ["industry_railroad_04_53", "industry_railroad_04_51", null, "industry_railroad_03_33", "industry_railroad_03_36", null],
             [null, null, null, "industry_railroad_01_0", "industry_railroad_01_1", "industry_railroad_01_2"],
             [null, null, null, "industry_railroad_04_8", "industry_railroad_04_10", "industry_railroad_04_12"],
@@ -133,7 +133,7 @@
             [null, null, null, null, null, null],
             [null, "industry_railroad_04_37", "industry_railroad_04_35", null, null, null],
             [null, null, "industry_railroad_04_32", null, null, null],
-            [null, "industry_railroad_03_45", null, null, null, null],
+            [null, "industry_railroad_03_45", null, "industry_railroad_04_28", null, null],
             [null, null, null, null, null, null],
             [null, null, null, null, null, null]
           ]

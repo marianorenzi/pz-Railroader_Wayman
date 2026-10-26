@@ -2,6 +2,7 @@
   "entity": "CrossingEdgeDiag",
   "costProfile": "track",
   "costMultiplier": 3,
+  "iconFace": "N",
   "faces": {
     "N": {
       "width": 6,

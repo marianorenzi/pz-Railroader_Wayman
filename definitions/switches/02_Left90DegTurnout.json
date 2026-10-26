@@ -28,7 +28,7 @@
         {
           "index": 1,
           "tiles": [
-            [null, "industry_railroad_05_53", null, "industry_railroad_04_28", null],
+            [null, "industry_railroad_05_53", null, null, null],
             [null, "industry_railroad_04_42", null, "industry_railroad_04_39", null],
             [null, "industry_railroad_04_40", null, "industry_railroad_04_36", null],
             [null, "industry_railroad_04_37", "industry_railroad_04_35", null, null],
