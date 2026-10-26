@@ -13,5 +13,7 @@
     "WaymanEntityName_SymmetricalCompactThreeWayTurnout": "Компактная симметричная трёхпутная стрелка",
     "WaymanEntityName_SymmetricalThreeWayTurnout": "Симметричная трёхпутная стрелка",
     "WaymanEntityName_TrackSegment": "Участок пути",
-    "WaymanEntityName_WyeTurnout": "Y-образная стрелка"
+    "WaymanEntityName_WyeTurnout": "Y-образная стрелка",
+    "Recipe_ForgeRailroadSpike": "Выковать костыль",
+    "Recipe_CastRailroadSpike": "Отлить костыль"
 }

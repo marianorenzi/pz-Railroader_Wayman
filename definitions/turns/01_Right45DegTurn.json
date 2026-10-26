@@ -1,8 +1,11 @@
 {
   "entity": "Right45DegTurn",
+  "costProfile": "turn",
+  "costMultiplier": 1,
   "iconFace": "W",
   "faces": {
     "N": {
+      "nodesFacing": "N,SW",
       "width": 6, "height": 3,
       "nodes": [{"x": 5, "y": 1, "z": 0}],
       "layers": [{ "index": 0, "tiles": [
@@ -12,6 +15,7 @@
       ] }]
     },
     "S": {
+      "nodesFacing": "S,NE",
       "width": 6, "height": 4,
       "nodes": [{"x": 2, "y": 2, "z": 0}],
       "layers": [{ "index": 0, "tiles": [
@@ -22,8 +26,9 @@
       ] }]
     },
     "E": {
+      "nodesFacing": "E,NW",
       "width": 5, "height": 4,
-      "nodes": [{"x": 6, "y": 3, "z": 0}],
+      "nodes": [{"x": 4, "y": 3, "z": 0}],
       "layers": [{ "index": 0, "tiles": [
         ["industry_railroad_01_16", "industry_railroad_01_17", "industry_railroad_02_17", "industry_railroad_02_20", "industry_railroad_02_23"],
         [null, "industry_railroad_02_16", "industry_railroad_02_19", "industry_railroad_02_22", "industry_railroad_02_25"],
@@ -32,6 +37,7 @@
       ] }]
     },
     "W": {
+      "nodesFacing": "W,SE",
       "width": 6, "height": 4,
       "nodes": [{"x": 1, "y": 2, "z": 0}],
       "layers": [{ "index": 0, "tiles": [

@@ -1,15 +1,18 @@
 {
   "entity": "Right45DegTurnout",
+  "costProfile": "turnout",
+  "costMultiplier": 1,
   "iconFace": "E",
   "faces": {
     "N": {
       "width": 8,
       "height": 6,
-      "at": {"x": 6, "y": 2, "z": 0},
+      "throatFacing": "N",
+      "throughFacing": "S",
+      "divergingFacing": "SW",
+      "at": {"x": 7, "y": 2, "z": 0},
       "switch": {"x": 4, "y": 0, "z": 0},
-      "divergingNodes": [
-        {"x": 2, "y": 6, "z": 0}
-      ],
+      "divergingNodes": [],
       "layers": [
         {
           "index": 0,
@@ -38,11 +41,12 @@
     "E": {
       "width": 5,
       "height": 4,
-      "at": {"x": 3, "y": 2, "z": 0},
+      "throatFacing": "E",
+      "throughFacing": "W",
+      "divergingFacing": "NW",
+      "at": {"x": 3, "y": 3, "z": 0},
       "switch": {"x": 4, "y": 0, "z": 0},
-      "divergingNodes": [
-        {"x": 0, "y": -1, "z": 0}
-      ],
+      "divergingNodes": [],
       "layers": [
         {
           "index": 0,
@@ -67,11 +71,12 @@
     "S": {
       "width": 9,
       "height": 6,
-      "at": {"x": 2, "y": 4, "z": 0},
+      "throatFacing": "S",
+      "throughFacing": "N",
+      "divergingFacing": "NE",
+      "at": {"x": 3, "y": 4, "z": 0},
       "switch": {"x": 0, "y": 5, "z": 0},
-      "divergingNodes": [
-        {"x": 7, "y": -1, "z": 0}
-      ],
+      "divergingNodes": [],
       "layers": [
         {
           "index": 0,
@@ -100,11 +105,12 @@
     "W": {
       "width": 6,
       "height": 4,
-      "at": {"x": 1, "y": 1, "z": 0},
+      "throatFacing": "W",
+      "throughFacing": "E",
+      "divergingFacing": "SE",
+      "at": {"x": 1, "y": 2, "z": 0},
       "switch": {"x": 0, "y": 3, "z": 0},
-      "divergingNodes": [
-        {"x": 4, "y": 4, "z": 0}
-      ],
+      "divergingNodes": [],
       "layers": [
         {
           "index": 0,

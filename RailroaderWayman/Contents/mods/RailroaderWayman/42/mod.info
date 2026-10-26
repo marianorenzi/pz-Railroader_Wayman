@@ -1,8 +1,8 @@
 name=Railroader: Wayman
 id=RailroaderWayman
 author=manoplin
-modversion=0.2.1
-description=Buildable railway track pieces for Railroader (Build 42).
+modversion=1.0.0
+description=Build railway tracks, curves and turnouts for Railroader 3.0, with construction guides and a route editor (Build 42).
 require=Railroader
 versionMin=42.0.0
 pack=railroader_wayman_tracks_01
@@ -35,3 +35,5 @@ pack=railroader_wayman_switches_11
 tiledef=railroader_wayman_switches_11 510
 pack=railroader_wayman_switches_12
 tiledef=railroader_wayman_switches_12 511
+pack=railroader_wayman_switches_13
+tiledef=railroader_wayman_switches_13 512

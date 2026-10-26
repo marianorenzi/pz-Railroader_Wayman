@@ -1,0 +1,72 @@
+{
+  "profiles": [
+    {
+      "name": "track",
+      "SkillRequired": "Woodwork:2",
+      "xpAward": "Woodwork:10",
+      "inputs": [
+        {
+          "qty": 1,
+          "item": "tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight]",
+          "multiply": false
+        },
+        {
+          "qty": 1,
+          "item": "Base.Plank"
+        },
+        {
+          "qty": 1,
+          "item": "Base.Nails"
+        }
+      ]
+    },
+    {
+      "name": "turn",
+      "SkillRequired": "Woodwork:6;MetalWelding:4",
+      "xpAward": "Woodwork:20;MetalWelding:10",
+      "inputs": [
+        {
+          "qty": 1,
+          "item": "tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight]",
+          "multiply": false
+        },
+        {
+          "qty": 4,
+          "item": "Base.Plank"
+        },
+        {
+          "qty": 2,
+          "item": "Base.RailroadSpike"
+        },
+        {
+          "qty": 1,
+          "item": "Base.MetalBar"
+        }
+      ]
+    },
+    {
+      "name": "turnout",
+      "SkillRequired": "Woodwork:7;MetalWelding:5",
+      "xpAward": "Woodwork:30;MetalWelding:15",
+      "inputs": [
+        {
+          "qty": 1,
+          "item": "tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight]",
+          "multiply": false
+        },
+        {
+          "qty": 6,
+          "item": "Base.Plank"
+        },
+        {
+          "qty": 4,
+          "item": "Base.RailroadSpike"
+        },
+        {
+          "qty": 2,
+          "item": "Base.MetalBar"
+        }
+      ]
+    }
+  ]
+}

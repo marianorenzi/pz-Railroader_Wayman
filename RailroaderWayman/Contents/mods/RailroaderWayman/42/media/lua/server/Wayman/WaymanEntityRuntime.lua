@@ -6,6 +6,7 @@ require "Wayman/WaymanEntityGeometry"
 require "Wayman/WaymanEntityDescriptor"
 require "Wayman/WaymanGraphData"
 require "Wayman/WaymanRRGraph"
+require "Wayman/WaymanConnections"
 
 RailroaderWaymanEntityRuntime = RailroaderWaymanEntityRuntime or {}
 
@@ -15,6 +16,7 @@ local pending = {}
 local GraphData = RailroaderWaymanGraphData
 local EntityDescriptor = RailroaderWaymanEntityDescriptor
 local RRGraph = RailroaderWaymanRRGraph
+local Connections = RailroaderWaymanConnections
 
 --- Writes a namespaced runtime diagnostic to the Project Zomboid log.
 local function log(message)
@@ -88,7 +90,7 @@ local registrationBuilders = {
 }
 
 --- Builds and appends one complete entity registration to staged graph data.
-local function registerGeometry(worldData, owner, geometry, origin)
+local function registerGeometry(worldData, owner, geometry, origin, physicalId)
     GraphData.ensure(worldData)
     local builder = registrationBuilders[geometry.kind]
     if not builder then return false, "unsupported geometry kind " .. tostring(geometry.kind) end
@@ -96,6 +98,7 @@ local function registerGeometry(worldData, owner, geometry, origin)
     if not registration then return false, reason end
 
     for _, block in ipairs(registration.blocks) do
+        Connections.decorate(block, geometry, physicalId)
         table.insert(worldData.availableNodes, block)
     end
     if registration.switch then
@@ -108,12 +111,15 @@ end
 --- Broadcasts authoritative Wayman world data when running as a server.
 local function transmitWorldData()
     if isServer() and ModData.transmit then ModData.transmit(WORLD_DATA_KEY) end
+    if not isServer() and RailroaderWaymanGraphEditor then
+        RailroaderWaymanGraphEditor.onWorldData(ModData.getOrCreate(WORLD_DATA_KEY))
+    end
 end
 
 --- Rebuilds RR's runtime-only route and graph registries from saved Wayman data.
 local function registerPersistedRRGraph()
+    if isClient() then return end
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
-    if type(worldData.edges) ~= "table" or type(worldData.edges.wayman) ~= "table" then return end
     local registered, reason = RRGraph.register(worldData)
     if not registered then
         log("saved RR route/graph registration failed: " .. tostring(reason))
@@ -154,7 +160,7 @@ local function removeOwner(owner, suppressNotification, preserveEmptyEdges, targ
         else
             for _, legName in ipairs({ "throat", "through", "diverge" }) do
                 local leg = switch.legs and switch.legs[legName]
-                if leg and removedEdges[leg.edge] then switch.legs[legName] = {} end
+                if leg and not leg.external and removedEdges[leg.edge] then switch.legs[legName] = {} end
             end
             table.insert(switches, switch)
         end
@@ -212,8 +218,7 @@ local function validateGraphState(worldData)
         end
     end
 
-    local allowMainEdge = type(worldData.origin) == "table"
-        and worldData.origin.edge == "main"
+    local externalEdges = RRGraph.externalEdges()
     local seenSwitches = {}
     for _, switch in ipairs(worldData.switches or {}) do
         if type(switch) ~= "table" or type(switch.id) ~= "string" or seenSwitches[switch.id]
@@ -229,10 +234,9 @@ local function validateGraphState(worldData)
             if (leg.edge == nil) ~= (leg.toward == nil) then
                 return false, "incomplete " .. legName .. " leg on " .. switch.id
             end
-            if leg.edge and not worldData.edges[leg.edge]
-                and leg.external ~= true
-                and not (allowMainEdge and leg.edge == "main") then
-                return false, "switch " .. switch.id .. " references missing edge " .. leg.edge
+            if leg.edge and (leg.external == true or not worldData.edges[leg.edge])
+                and not (externalEdges and externalEdges[leg.edge]) then
+                return false, "switch " .. switch.id .. " references unknown external edge " .. leg.edge
             end
             if leg.toward and leg.toward ~= "start" and leg.toward ~= "end" then
                 return false, "invalid toward on " .. switch.id
@@ -295,19 +299,39 @@ local function effectiveGeometry(defaults, supplied)
     supplied = type(supplied) == "table" and supplied or {}
     local builder = effectiveGeometryBuilders[defaults.kind]
     if not builder then return nil, "unsupported geometry kind " .. tostring(defaults.kind) end
-    return builder(defaults, supplied)
+    local geometry = builder(defaults, supplied)
+    for _, field in ipairs(Connections.facingFields) do geometry[field] = defaults[field] end
+    return geometry
 end
 
 --- Reports whether an owner is represented anywhere in the global graph state.
 ---@param worldData table
 ---@param owner string?
----@return boolean
+---@return table|boolean
 local function ownerExists(worldData, owner)
     if not owner then return false end
-    for _, block in ipairs(worldData.availableNodes) do if block.owner == owner then return true end end
+    for _, block in ipairs(worldData.availableNodes) do if block.owner == owner then return block end end
+    for _, blocks in pairs(worldData.edges) do
+        for _, block in ipairs(blocks) do if block.owner == owner then return block end end
+    end
     for _, switch in ipairs(worldData.switches) do if switch.owner == owner then return true end end
+    return false
+end
+
+--- Available blocks and incomplete switches do not change RR's operative graph.
+local function ownerAffectsTrack(worldData, owner)
     for _, blocks in pairs(worldData.edges) do
         for _, block in ipairs(blocks) do if block.owner == owner then return true end end
+    end
+    for _, switch in ipairs(worldData.switches) do
+        if switch.owner == owner then
+            local complete = true
+            for _, name in ipairs({ "throat", "through", "diverge" }) do
+                local leg = switch.legs and switch.legs[name]
+                if not leg or not leg.edge or not leg.toward then complete = false end
+            end
+            if complete then return true end
+        end
     end
     return false
 end
@@ -368,25 +392,25 @@ end
 ---@param object IsoObject
 ---@param submittedData table?
 ---@param requestedFacing string?
+---@param componentIndex integer? component selection within the physical entity
 ---@return boolean, string?
-function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, requestedFacing)
+function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, requestedFacing, componentIndex)
     -- validate authority
     if isClient() then return false, "server authority required" end
 
     -- Resolve the physical object and its trusted geometry definition.
-    local entity, reason = EntityDescriptor.describe(object, requestedFacing)
+    local entity, reason = EntityDescriptor.getInstance(object, requestedFacing, componentIndex)
     if not entity then
         log("geometry update skipped: " .. tostring(reason))
         return false, reason
     end
 
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
-    local masterModData = entity.master:getModData()
     submittedData = type(submittedData) == "table" and submittedData or {}
 
     -- Identity is server-owned. Client modData may supply geometry overrides,
     -- but it cannot select another entity's owner ID.
-    local serverId = masterModData[OBJECT_DATA_KEY] and masterModData[OBJECT_DATA_KEY].id
+    local serverId = entity.data.id
     local owner = ownerExists(worldData, serverId) and serverId or nil
 
     -- Stage removal, rebuilding, and placement restoration on an isolated copy.
@@ -397,7 +421,14 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
         placement = capturePlacement(staged, owner)
         removeOwner(owner, true, true, staged)
     else
-        owner = nextId(entity.defaults.kind, staged)
+        if entity.componentIndex and type(serverId) == "string" then
+            owner = serverId
+            local number = tonumber(owner:match("^" .. entity.defaults.kind .. "_(%d+)$"))
+            local counter = entity.defaults.kind == "turnout" and "nextTurnoutId" or "nextTurnId"
+            if number then staged[counter] = math.max(staged[counter] or 1, number + 1) end
+        else
+            owner = nextId(entity.defaults.kind, staged)
+        end
         placement = { blocks = {} }
     end
 
@@ -405,7 +436,8 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
     -- the entity's prior edge position/inversion and switch legs.
     local geometry, geometryReason = effectiveGeometry(entity.defaults, submittedData)
     if not geometry then return false, geometryReason end
-    local registered, registerReason = registerGeometry(staged, owner, geometry, entity.origin)
+    local registered, registerReason = registerGeometry(staged, owner, geometry, entity.origin,
+        Connections.physicalId(entity.entityName, entity.origin))
     if not registered then
         log("geometry update skipped: " .. tostring(registerReason))
         return false, registerReason
@@ -418,6 +450,14 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
         return false, validationReason
     end
 
+    if ownerAffectsTrack(worldData, owner) or ownerAffectsTrack(staged, owner) then
+        local accepted, rrReason = RRGraph.register(staged)
+        if not accepted then
+            log("geometry publication rejected (Wayman/RR): " .. tostring(rrReason))
+            return false, rrReason
+        end
+    end
+
     -- Commit the staged collections only after the replacement is complete.
     worldData.availableNodes = staged.availableNodes
     worldData.edges = staged.edges
@@ -428,7 +468,7 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
 
     -- Persist relative geometry on the physical entity so it can be recovered
     -- independently of loaded squares and reconstructed with a fresh origin.
-    local saved = { id = owner }
+    local saved = { id = owner, physicalId = Connections.physicalId(entity.entityName,entity.origin) }
     if geometry.kind == "turn" then
         saved.nodes = GraphData.copy(submittedData.nodes)
     else
@@ -437,7 +477,10 @@ function RailroaderWaymanEntityRuntime.SaveGeometry(object, submittedData, reque
         saved.throughNodes = GraphData.copy(submittedData.throughNodes)
         saved.divergingNodes = GraphData.copy(submittedData.divergingNodes)
     end
-    masterModData[OBJECT_DATA_KEY] = saved
+    EntityDescriptor.storeData(entity, saved)
+    if not isServer() and RailroaderWaymanEntityDebug then
+        RailroaderWaymanEntityDebug.capture(entity, owner)
+    end
     if isServer() then entity.master:transmitModData() end
     log("saved entity modData for " .. tostring(owner) .. ": " .. tostring(saved))
     transmitWorldData()
@@ -452,21 +495,47 @@ end
 ---@param requestedFacing string?
 ---@return boolean, string?
 local function initialize(object, requestedFacing)
-    local entity, reason = EntityDescriptor.describe(object, requestedFacing)
-    if not entity then
+    local instances, reason = EntityDescriptor.getInstances(object, requestedFacing)
+    if not instances then
         log("initialization skipped: " .. tostring(reason))
         return false, reason
     end
 
-    local waymanData = entity.master:getModData()[OBJECT_DATA_KEY] or {}
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
-    if ownerExists(worldData, waymanData.id) then
-        log("already initialized: " .. tostring(waymanData.id))
-        return true
+    local upgraded = false
+    for _, entity in ipairs(instances) do
+        local existing = ownerExists(worldData, entity.data.id)
+        if existing then
+            -- Enrich pre-guide saves once the real parent is loaded. Existing
+            -- coordinates, IDs, edge membership and inversion remain untouched.
+            if type(existing) == "table" and not existing.physicalId then
+                local physicalId = Connections.physicalId(entity.entityName, entity.origin)
+                local function enrich(block)
+                    if block.owner == entity.data.id then Connections.decorate(block,entity.defaults,physicalId) end
+                end
+                for _, block in ipairs(worldData.availableNodes) do enrich(block) end
+                for _, blocks in pairs(worldData.edges) do
+                    for _, block in ipairs(blocks) do enrich(block) end
+                end
+                entity.data.physicalId = physicalId
+                EntityDescriptor.storeData(entity,entity.data)
+                if isServer() then entity.master:transmitModData() end
+                upgraded = true
+            end
+            if not isServer() and RailroaderWaymanEntityDebug then
+                RailroaderWaymanEntityDebug.capture(entity, entity.data.id)
+            end
+        else
+            local ok, err = RailroaderWaymanEntityRuntime.SaveGeometry(
+                entity.master, entity.data, entity.facing, entity.componentIndex)
+            if not ok then return false, err end
+        end
     end
-
-    return RailroaderWaymanEntityRuntime.SaveGeometry(
-        entity.master, waymanData, entity.facing)
+    if upgraded then
+        worldData.revision = worldData.revision+1
+        transmitWorldData()
+    end
+    return true
 end
 
 --- Handles physical entity removal and atomically removes all owned graph data.
@@ -478,40 +547,128 @@ function RailroaderWaymanEntityRuntime.OnRemove(object)
         if EntityDescriptor.getMaster(pending[index].object) == master then table.remove(pending, index) end
     end
     local data = master:getModData()[OBJECT_DATA_KEY]
-    if data and data.id then removeOwner(data.id) end
+    if not data then return end
+    local owners = {}
+    if data.id then owners[#owners + 1] = data.id end
+    for _, component in ipairs(data.components or {}) do
+        if component.id then owners[#owners + 1] = component.id end
+    end
+    local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
+    local staged = GraphData.copy(worldData)
+    local removed, affectsTrack = false, false
+    for _, owner in ipairs(owners) do
+        affectsTrack = ownerAffectsTrack(worldData, owner) or affectsTrack
+        removed = removeOwner(owner, true, false, staged) or removed
+    end
+    if not removed then return end
+    staged.revision = worldData.revision + 1
+    if affectsTrack then
+        local accepted, reason = RRGraph.register(staged)
+        if not accepted then
+            -- The physical deletion cannot be rolled back. RR may retain its
+            -- last accepted overlay, but authoritative owner data must go away.
+            staged.rrSync = {pending=true, reason=tostring(reason)}
+            log("entity removed from WorldData; RR update pending: " .. tostring(reason))
+        else
+            staged.rrSync = nil
+        end
+    end
+    worldData.availableNodes = staged.availableNodes
+    worldData.edges = staged.edges
+    worldData.switches = staged.switches
+    worldData.revision = staged.revision
+    worldData.rrSync = staged.rrSync
+    local identities = worldData.debug and worldData.debug.entityValidation
+        and worldData.debug.entityValidation.entities
+    for _, owner in ipairs(owners) do
+        if identities then identities[owner] = nil end
+        if not isServer() and RailroaderWaymanEntityDebug then
+            RailroaderWaymanEntityDebug.remove(owner)
+        end
+    end
+    transmitWorldData()
 end
 
 --- Applies a validated graph-editor transaction to authoritative global state.
-function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision)
+function RailroaderWaymanEntityRuntime.ApplyGraphDraft(draft, baseRevision, geometryEdits, player)
+    if isClient() then return false, "server authority required" end
     local worldData = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
+    if baseRevision ~= worldData.revision then return false, "graph revision changed" end
+    local canonical, changes = GraphData.copy(worldData), {}
+    if geometryEdits ~= nil and type(geometryEdits) ~= "table" then return false, "invalid geometry edits" end
+    if geometryEdits and not GraphData.isEmpty(geometryEdits) then
+        local level = player and player:getAccessLevel()
+        if not ((getDebug and getDebug()) or (isServer() and (level == "Admin" or level == "admin"))) then
+            return false, "geometry editing requires debug mode or a server admin"
+        end
+        for owner, edit in pairs(geometryEdits) do
+            if type(edit) ~= "table" or type(edit.modData) ~= "table"
+                or edit.modData.id ~= owner or not ownerExists(worldData, owner)
+                or not validNode(edit) then return false, "invalid geometry owner " .. tostring(owner) end
+            local square = getCell():getGridSquare(edit.x, edit.y, edit.z or 0)
+            local entity
+            if square then
+                local objects = square:getObjects()
+                for i = 0, objects:size() - 1 do
+                    local candidate = EntityDescriptor.getInstance(objects:get(i), nil, owner)
+                    if candidate then entity = candidate break end
+                end
+            end
+            if not entity then return false, "edited entity is not loaded" end
+            if entity.entityName ~= edit.entityName or entity.facing ~= edit.facing then
+                return false, "edited entity identity changed: " .. owner
+            end
+            local geometry, geometryReason = effectiveGeometry(entity.defaults, edit.modData)
+            if not geometry then return false, geometryReason end
+            local placement = capturePlacement(canonical, owner)
+            removeOwner(owner, true, true, canonical)
+            local ok, whyRegister = registerGeometry(canonical, owner, geometry, entity.origin,
+                Connections.physicalId(entity.entityName, entity.origin))
+            if not ok then return false, whyRegister end
+            restorePlacement(canonical, owner, placement)
+            changes[#changes + 1] = {entity=entity, owner=owner, geometry=geometry, data=edit.modData}
+        end
+        canonical.revision = worldData.revision
+    end
+    draft = GraphData.copy(draft)
     if type(draft) == "table" then draft.revision = baseRevision end
-    local normalized, reason = GraphData.validateDraft(worldData, draft)
+    local normalized, reason = GraphData.validateDraft(canonical, draft, RRGraph.externalEdges())
     if not normalized then
         log("graph update rejected: " .. tostring(reason))
         return false, reason
     end
-    if reason then
-        log("graph origin normalized: " .. tostring(reason))
-    end
-    local rrDefinition, rrReason = RRGraph.export(normalized)
-    if not rrDefinition then
-        log("graph update rejected by RR export: " .. tostring(rrReason))
+    local accepted, rrReason = RRGraph.register(normalized)
+    if not accepted then
+        log("graph publication rejected (Wayman/RR): " .. tostring(rrReason))
         return false, rrReason
     end
     worldData.availableNodes = normalized.availableNodes
     worldData.edges = normalized.edges
     worldData.switches = normalized.switches
-    worldData.origin = normalized.origin
+    worldData.origin = nil
     worldData.nextEdgeId = normalized.nextEdgeId
     worldData.revision = normalized.revision
-    transmitWorldData()
-    local registered, registerReason = RRGraph.register(worldData)
-    if not registered then
-        log("RR graph registration failed at revision " .. tostring(worldData.revision)
-            .. ": " .. tostring(registerReason))
+    worldData.rrSync = nil
+    for _, change in ipairs(changes) do
+        local saved = {id=change.owner,
+            physicalId=Connections.physicalId(change.entity.entityName,change.entity.origin)}
+        for _, field in ipairs(change.geometry.kind == "turn" and {"nodes"}
+            or {"at","switch","throughNodes","divergingNodes"}) do saved[field] = GraphData.copy(change.data[field]) end
+        EntityDescriptor.storeData(change.entity, saved)
+        change.entity.master:transmitModData()
+        if not isServer() and RailroaderWaymanEntityDebug then
+            RailroaderWaymanEntityDebug.capture(change.entity, change.owner)
+        end
     end
+    -- GlobalModData is written by a world save in SP and on the server.
+    -- Request it after the complete commit, before acknowledging publication.
+    if not isClient() then
+        log("requesting world save for accepted graph revision " .. tostring(worldData.revision))
+        save(true)
+    end
+    transmitWorldData()
     log("graph update accepted at revision " .. tostring(worldData.revision))
-    return true
+    return true, GraphData.copy(worldData)
 end
 
 --- Locates and verifies the server-side rail entity referenced by a client command.
@@ -534,8 +691,8 @@ local function findCommandObject(args)
         local master = EntityDescriptor.getMaster(objects:get(objectIndex))
         local script = master and master:getEntityScript()
         if script and RailroaderWaymanEntityGeometry[script:getName()] then
-            local data = master:getModData()[OBJECT_DATA_KEY]
-            if not args.modData or not args.modData.id or (data and data.id == args.modData.id) then
+            if not args.modData or not args.modData.id
+                or EntityDescriptor.getInstance(master, nil, args.modData.id) then
                 return master
             end
         end
@@ -548,23 +705,36 @@ local function onClientCommand(module, command, player, args)
     if module ~= "RailroaderWayman" then return end
     if command == "applyGraph" then
         local ok, reason = RailroaderWaymanEntityRuntime.ApplyGraphDraft(
-            args and args.draft, args and args.revision)
-        if not ok and sendServerCommand then
-            sendServerCommand(player, "RailroaderWayman", "graphRejected", {
-                reason = reason,
+            args and args.draft, args and args.revision, args and args.geometryEdits, player)
+        if sendServerCommand then
+            sendServerCommand(player, "RailroaderWayman", "graphResult", {
+                requestId = args and args.requestId,
+                ok = ok,
+                reason = not ok and reason or nil,
+                worldData = ok and reason or GraphData.copy(ModData.getOrCreate(WORLD_DATA_KEY)),
             })
         end
     elseif command == "updateRailEntity" then
+        local level = player and player:getAccessLevel()
+        if not ((getDebug and getDebug()) or (isServer() and (level == "Admin" or level == "admin"))) then
+            if sendServerCommand then
+                sendServerCommand(player, "RailroaderWayman", "railEntityUpdated", {
+                    ok=false,reason="geometry editing requires debug mode or a server admin",requestId=args and args.requestId,
+                })
+            end
+            return
+        end
         local object = findCommandObject(args)
         local ok, result
         if object then
             ok, result = RailroaderWaymanEntityRuntime.SaveGeometry(
-                object, args and args.modData, args and args.facing)
+                object, args and args.modData, args and args.facing, args and args.componentIndex)
         else
             ok, result = false, "rail entity not found on server"
         end
         if sendServerCommand then
             sendServerCommand(player, "RailroaderWayman", "railEntityUpdated", {
+                requestId = args and args.requestId,
                 ok = ok,
                 id = ok and result or nil,
                 reason = ok and nil or result,
@@ -609,7 +779,32 @@ function RailroaderWaymanEntityRuntime.OnCreate(params)
 end
 
 Events.OnTick.Add(initializePending)
-Events.OnInitGlobalModData.Add(registerPersistedRRGraph)
+if Events.LoadGridsquare then
+    Events.LoadGridsquare.Add(function(square)
+        if isClient() then return end
+        local objects = square:getObjects()
+        for i=0,objects:size()-1 do
+            local object = objects:get(i)
+            local script = object:getEntityScript()
+            if script and RailroaderWaymanEntityGeometry[script:getName()] then
+                local master = EntityDescriptor.getMaster(object)
+                if master:getSquare()==square then
+                    local data = master:getModData()[OBJECT_DATA_KEY] or {}
+                    local needsMetadata = data.id and not data.physicalId
+                    for _, component in ipairs(data.components or {}) do
+                        if component.id and not component.physicalId then needsMetadata=true end
+                    end
+                    if needsMetadata then pending[#pending+1] = {object=master} end
+                end
+            end
+        end
+    end)
+end
+if Events.OnRailroaderRegisterTrack then
+    Events.OnRailroaderRegisterTrack.Add(registerPersistedRRGraph)
+else
+    log("OnRailroaderRegisterTrack is unavailable; this Railroader build cannot restore Wayman track")
+end
 Events.OnObjectAboutToBeRemoved.Add(RailroaderWaymanEntityRuntime.OnRemove)
 Events.OnClientCommand.Add(onClientCommand)
 

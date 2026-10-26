@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0
+
+- Added support for Railroader 3.0 through its public API, connecting Wayman routes to the existing railway in singleplayer and multiplayer.
+- Added construction guides with connection directions, compatibility feedback and distances to help align curves and turnouts.
+- Corrected the appearance and alignment of railway pieces and adjusted their route nodes.
+- Rebalanced construction materials and skill requirements, including both three-way turnouts.
+- Added railroad spike forging and casting recipes, plus material recovery through the game's Disassemble action.
+- Added persistent editing drafts and conflict review, preserving unfinished work and keeping the last accepted routes when an edit is rejected.
+- Improved route colors and selection visibility on the World Map.
+- Improved editor responsiveness and graph save reliability; automatic graph diagnostics now require debug mode, while manual Export remains available.
+
 ## 0.2.1
 
 ### New

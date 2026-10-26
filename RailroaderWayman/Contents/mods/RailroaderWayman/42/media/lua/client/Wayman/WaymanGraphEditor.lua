@@ -2,6 +2,8 @@
 -- edits edges/switch legs/node-block assignments, submits one atomic server
 -- transaction, and updates shared visualization options without owning renderers.
 require "Wayman/WaymanGraphData"
+require "Wayman/WaymanLocalDraft"
+require "Wayman/WaymanRRGraph"
 require "Wayman/WaymanGraphDisplay"
 require "Wayman/WaymanLocalization"
 require "Wayman/WaymanNodeBlockTable"
@@ -9,6 +11,7 @@ require "ISUI/ISButton"
 require "ISUI/ISCollapsableWindowJoypad"
 require "ISUI/ISComboBox"
 require "ISUI/ISLabel"
+require "ISUI/ISModalRichText"
 require "ISUI/ISPanel"
 require "ISUI/ISScrollingListBox"
 require "ISUI/ISTabPanel"
@@ -18,13 +21,14 @@ require "ISUI/ISTextEntryBox"
 RailroaderWaymanGraphEditor = RailroaderWaymanGraphEditor or {}
 local Controller = RailroaderWaymanGraphEditor
 local GraphData = RailroaderWaymanGraphData
+local Drafts = RailroaderWaymanLocalDraft
+local RRGraph = RailroaderWaymanRRGraph
 local GraphDisplay = RailroaderWaymanGraphDisplay
 local WORLD_DATA_KEY = "RailroaderWayman_World"
 local SPACING = 10
 local BUTTON_H = 25
 local ROW_H = 28
 local DISPLAY_GAP = 16
-local EXTERNAL_EDGE = "__wayman_external_edge__"
 
 --- Restores saved session bounds while keeping the window on the current screen.
 local function windowBounds(state, defaultWidth, defaultHeight)
@@ -68,27 +72,26 @@ local function fillEdgeCombo(combo, edges, includeEmpty, selected)
     if selected ~= nil then combo:setSelectedData(selected or false) end
 end
 
---- Populates a switch-leg selector with Wayman, main, and custom external edges.
-local function fillSwitchEdgeCombo(combo, edges, selected, includeMain, external)
+--- Populates all real edge IDs, retaining a missing saved reference until it is edited.
+local function fillSwitchEdgeCombo(combo, edges, leg)
     clearCombo(combo)
     combo:addOptionWithData(WaymanLocalization.ui("Unassigned"), false)
-    if includeMain and not edges.main then combo:addOptionWithData("main", "main") end
-    for _, edgeId in ipairs(sortedKeys(edges)) do
-        combo:addOptionWithData(edgeId, edgeId)
+    combo:setSelectedData(false)
+    leg = leg or {}
+    local selected = leg.edge and ((leg.external or not edges[leg.edge])
+        and leg.edge or RRGraph.ownId(leg.edge))
+    local options, reason = RRGraph.edgeOptions(edges)
+    local found = false
+    for _, option in ipairs(options) do
+        combo:addOptionWithData(option.label, option)
+        if option.id == selected then combo:setSelectedData(option); found = true end
     end
-    combo:addOptionWithData(WaymanLocalization.ui("External"), EXTERNAL_EDGE)
-    combo:setSelectedData(external and EXTERNAL_EDGE or selected or false)
-end
-
---- Populates the origin edge selector with an empty option, main, and draft edges.
-local function fillOriginEdgeCombo(combo, edges, selected)
-    clearCombo(combo)
-    combo:addOptionWithData(WaymanLocalization.ui("Unassigned"), false)
-    combo:addOptionWithData("main", "main")
-    for _, edgeId in ipairs(sortedKeys(edges)) do
-        if edgeId ~= "main" then combo:addOptionWithData(edgeId, edgeId) end
+    if selected and not found then
+        local option = { id = selected, edge = leg.edge, external = leg.external }
+        combo:addOptionWithData(selected:find(":", 1, true) and selected or "rr:" .. selected, option)
+        combo:setSelectedData(option)
     end
-    combo:setSelectedData(selected or false)
+    return reason
 end
 
 --- @class WaymanGraphEditor: ISCollapsableWindowJoypad
@@ -298,14 +301,12 @@ function GraphEditor:createChildren()
     -- Tab content panels
     self.edgesPanel = newPanel(self.tabs.width, self.tabs.height - self.tabs.tabHeight)
     self.switchesPanel = newPanel(self.tabs.width, self.tabs.height - self.tabs.tabHeight)
-    self.originPanel = newPanel(self.tabs.width, self.tabs.height - self.tabs.tabHeight)
-    for _, panel in ipairs({ self.edgesPanel, self.switchesPanel, self.originPanel }) do
+    for _, panel in ipairs({ self.edgesPanel, self.switchesPanel }) do
         panel:setAnchorRight(true)
         panel:setAnchorBottom(true)
     end
     self.tabs:addView(WaymanLocalization.ui("Edges"), self.edgesPanel)
     self.tabs:addView(WaymanLocalization.ui("Switches"), self.switchesPanel)
-    self.tabs:addView(WaymanLocalization.ui("Origin"), self.originPanel)
 
     -- Edge panel
     self:createEdgePanel()
@@ -321,18 +322,9 @@ function GraphEditor:createChildren()
             1, 1, 1, 1, UIFont.Small, true)
         label:initialise()
         self.switchesPanel:addChild(label)
-        local edgeCombo = ISComboBox:new(110, y, 170, BUTTON_H, self, self.onSwitchLegChanged, legName)
+        local edgeCombo = ISComboBox:new(110, y, 350, BUTTON_H, self, self.onSwitchLegChanged, legName)
         edgeCombo:initialise()
         self.switchesPanel:addChild(edgeCombo)
-        local externalEntry = ISTextEntryBox:new("", 290, y, 170, BUTTON_H)
-        externalEntry:initialise()
-        externalEntry:instantiate()
-        externalEntry:setPlaceholderText(WaymanLocalization.ui("ExternalEdgeId"))
-        externalEntry:setEditable(false)
-        externalEntry.target = self
-        externalEntry.legName = legName
-        externalEntry.onTextChangeFunction = self.onSwitchLegChanged
-        self.switchesPanel:addChild(externalEntry)
         local towardCombo = ISComboBox:new(470, y, 130, BUTTON_H, self, self.onSwitchLegChanged, legName)
         towardCombo:initialise()
         towardCombo:addOptionWithData("—", false)
@@ -341,42 +333,9 @@ function GraphEditor:createChildren()
         self.switchesPanel:addChild(towardCombo)
         self.legControls[legName] = {
             edge = edgeCombo,
-            external = externalEntry,
             toward = towardCombo,
         }
     end
-
-    -- Origin panel
-    local originEdgeLabel = ISLabel:new(0, 13, 20, WaymanLocalization.ui("Edge"),
-        1, 1, 1, 1, UIFont.Small, true)
-    originEdgeLabel:initialise()
-    self.originPanel:addChild(originEdgeLabel)
-    self.originEdgeCombo = ISComboBox:new(110, 8, 330, BUTTON_H,
-        self, self.onOriginChanged)
-    self.originEdgeCombo:initialise()
-    self.originPanel:addChild(self.originEdgeCombo)
-
-    local originTowardLabel = ISLabel:new(0, 65, 20, WaymanLocalization.ui("Toward"),
-        1, 1, 1, 1, UIFont.Small, true)
-    originTowardLabel:initialise()
-    self.originPanel:addChild(originTowardLabel)
-    self.originTowardCombo = ISComboBox:new(110, 60, 180, BUTTON_H,
-        self, self.onOriginChanged)
-    self.originTowardCombo:initialise()
-    self.originTowardCombo:addOptionWithData(WaymanLocalization.ui("TowardStart"), "start")
-    self.originTowardCombo:addOptionWithData(WaymanLocalization.ui("TowardEnd"), "end")
-    self.originPanel:addChild(self.originTowardCombo)
-
-    local originOffsetLabel = ISLabel:new(0, 117, 20, WaymanLocalization.ui("Offset"),
-        1, 1, 1, 1, UIFont.Small, true)
-    originOffsetLabel:initialise()
-    self.originPanel:addChild(originOffsetLabel)
-    self.originOffsetEntry = ISTextEntryBox:new("", 110, 112, 180, BUTTON_H)
-    self.originOffsetEntry:initialise()
-    self.originOffsetEntry:instantiate()
-    self.originOffsetEntry.target = self
-    self.originOffsetEntry.onTextChangeFunction = self.onOriginChanged
-    self.originPanel:addChild(self.originOffsetEntry)
 
     -- Footer controls
     local displayOptions = GraphDisplay.getOptions()
@@ -448,14 +407,22 @@ function GraphEditor:createChildren()
     self:refreshAll()
 end
 
---- Writes the last authoritative world-data snapshot to the game log.
+--- Exports confirmed data normally, or the draft with identities during debug capture.
 function GraphEditor:onExport()
     local worldData = ModData.get(WORLD_DATA_KEY)
     if not worldData then
         self.statusLabel:setName(WaymanLocalization.ui("StatusNoWorldData"))
         return
     end
-    local json, reason = GraphData.worldDataToJSON(worldData)
+    local snapshot
+    if RailroaderWaymanEntityDebug then
+        snapshot = RailroaderWaymanEntityDebug.export(self.draft, self.baseRevision, worldData)
+    end
+    if not snapshot then
+        snapshot = GraphData.copy(worldData)
+        snapshot.debug = nil
+    end
+    local json, reason = GraphData.worldDataToJSON(snapshot)
     if not json then
         self.statusLabel:setName(WaymanLocalization.ui("StatusExportFailed", tostring(reason)))
         return
@@ -490,18 +457,22 @@ end
 --- Marks the shared editor draft as modified and updates footer status.
 function GraphEditor:setDirty()
     self.dirty = true
-    self.statusLabel:setName(WaymanLocalization.ui("StatusUnsavedChanges"))
     GraphDisplay.refresh(self.draft)
+    if self.localState then
+        self.localState.draft = self.draft
+        local ok, reason = Drafts.save(self.localState)
+        if not ok then
+            self.statusLabel:setName(WaymanLocalization.ui("StatusLocalSaveFailed", tostring(reason)))
+            return
+        end
+    end
+    self.statusLabel:setName(WaymanLocalization.ui("StatusDraftSaved"))
 end
 
 --- Rebuilds every edge-dependent selector after graph structure changes.
 function GraphEditor:refreshEdgeCombos(selected)
     fillEdgeCombo(self.edgeCombo, self.draft.edges, false, selected or self:getSelectedEdgeId())
     self:refreshSwitchEdgeCombos()
-    if self.originEdgeCombo then
-        fillOriginEdgeCombo(self.originEdgeCombo, self.draft.edges,
-            self.draft.origin and self.draft.origin.edge)
-    end
     self.deleteEdgeButton:setEnable(self.edgeCombo:getOptionCount() > 0)
 end
 
@@ -523,13 +494,13 @@ function GraphEditor:refreshAvailable()
     if not selectedExists then Controller.selectedAvailableBlockId = nil end
 end
 
---- Refreshes switch-leg edge options, including RR main only for a main origin.
+--- Refreshes the catalog without changing any draft leg.
 function GraphEditor:refreshSwitchEdgeCombos()
-    local includeMain = self.draft.origin and self.draft.origin.edge == "main"
-    for _, controls in pairs(self.legControls or {}) do
-        local prior = comboData(controls.edge)
-        local external = prior == EXTERNAL_EDGE
-        fillSwitchEdgeCombo(controls.edge, self.draft.edges, prior, includeMain, external)
+    local switch = self:getSelectedSwitch()
+    for name, controls in pairs(self.legControls or {}) do
+        local reason = fillSwitchEdgeCombo(controls.edge, self.draft.edges,
+            switch and switch.legs[name])
+        if reason and self.statusLabel then self.statusLabel:setName(reason) end
     end
 end
 
@@ -543,19 +514,6 @@ function GraphEditor:refreshSwitches(selected)
     self:onSwitchSelected()
 end
 
---- Loads the optional RR graph origin into its three controls.
-function GraphEditor:refreshOrigin()
-    local origin = self.draft.origin
-    self.updatingOrigin = true
-    fillOriginEdgeCombo(self.originEdgeCombo, self.draft.edges, origin and origin.edge)
-    self.originTowardCombo:setSelectedData(origin and origin.toward or "start")
-    self.originOffsetEntry:setText(origin and origin.s ~= nil and tostring(origin.s) or "")
-    local enabled = origin ~= nil
-    self.originTowardCombo:setEnabled(enabled)
-    self.originOffsetEntry:setEditable(enabled)
-    self.updatingOrigin = false
-end
-
 --- Refreshes every tab from the current shared draft.
 function GraphEditor:refreshAll()
     local edge = self:getSelectedEdgeId()
@@ -563,7 +521,6 @@ function GraphEditor:refreshAll()
     self:refreshEdgeList()
     self:refreshAvailable()
     self:refreshSwitches(comboData(self.switchCombo))
-    self:refreshOrigin()
 end
 
 --- Updates edge rows and map highlighting after selector changes.
@@ -640,11 +597,8 @@ function GraphEditor:onDeleteEdge()
     self.draft.edges[edgeId] = nil
     for _, switch in ipairs(self.draft.switches) do
         for _, legName in ipairs({ "throat", "through", "diverge" }) do
-            if switch.legs[legName].edge == edgeId then switch.legs[legName] = {} end
+            if switch.legs[legName].edge == edgeId and not switch.legs[legName].external then switch.legs[legName] = {} end
         end
-    end
-    if self.draft.origin and self.draft.origin.edge == edgeId then
-        self.draft.origin = nil
     end
     Controller.selectedEdgeId = nil
     self:refreshAll()
@@ -740,14 +694,11 @@ end
 --- Loads all three leg controls for the newly selected switch.
 function GraphEditor:onSwitchSelected(_combo)
     local switch = self:getSelectedSwitch()
-    local includeMain = self.draft.origin and self.draft.origin.edge == "main"
     self.updatingSwitch = true
     for legName, controls in pairs(self.legControls) do
         local leg = switch and switch.legs[legName] or {}
-        fillSwitchEdgeCombo(controls.edge, self.draft.edges,
-            leg.edge or false, includeMain, leg.external == true)
-        controls.external:setText(leg.external and leg.edge or "")
-        controls.external:setEditable(switch ~= nil and leg.external == true)
+        local reason = fillSwitchEdgeCombo(controls.edge, self.draft.edges, leg)
+        if reason and self.statusLabel then self.statusLabel:setName(reason) end
         controls.toward:setSelectedData(leg.toward or false)
     end
     self.updatingSwitch = false
@@ -762,13 +713,8 @@ function GraphEditor:onSwitchLegChanged(_combo, legName)
     local controls = self.legControls[legName]
     if not switch or not controls then return end
     local selectedEdge = comboData(controls.edge)
-    local external = selectedEdge == EXTERNAL_EDGE
-    controls.external:setEditable(external)
-    local edge = selectedEdge
-    if external then
-        edge = controls.external:getText():match("^%s*(.-)%s*$")
-        if edge == "" then edge = nil end
-    end
+    local edge = selectedEdge and selectedEdge.edge
+    local external = selectedEdge and selectedEdge.external
     local toward = comboData(controls.toward)
     if edge and not toward then
         toward = "start"
@@ -789,51 +735,6 @@ function GraphEditor:onSwitchLegChanged(_combo, legName)
     self:setDirty()
 end
 
---- Clears switch legs that reference RR main after that external edge is disabled.
-function GraphEditor:clearUnavailableMainLegs()
-    if self.draft.edges.main
-        or (self.draft.origin and self.draft.origin.edge == "main") then
-        return
-    end
-    for _, switch in ipairs(self.draft.switches) do
-        for _, legName in ipairs({ "throat", "through", "diverge" }) do
-            local leg = switch.legs and switch.legs[legName]
-            if leg and leg.edge == "main" and not leg.external then
-                switch.legs[legName] = {}
-            end
-        end
-    end
-end
-
---- Stores or clears the optional RR graph origin from the Origin tab.
-function GraphEditor:onOriginChanged(_control)
-    if self.updatingOrigin then return end
-    local edge = comboData(self.originEdgeCombo)
-    if not edge then
-        self.draft.origin = nil
-        self:refreshOrigin()
-        self:clearUnavailableMainLegs()
-        self:refreshSwitchEdgeCombos()
-        self:setDirty()
-        return
-    end
-
-    local toward = comboData(self.originTowardCombo) or "start"
-    local offsetText = self.originOffsetEntry:getText():match("^%s*(.-)%s*$")
-    local offset = offsetText ~= "" and tonumber(offsetText) or nil
-    if offset ~= offset or offset == math.huge or offset == -math.huge then offset = nil end
-    self.draft.origin = {
-        edge = edge,
-        toward = toward,
-        s = offset,
-    }
-    self.originTowardCombo:setEnabled(true)
-    self.originOffsetEntry:setEditable(true)
-    self:clearUnavailableMainLegs()
-    self:refreshSwitchEdgeCombos()
-    self:setDirty()
-end
-
 --- Updates local-only map and world-highlight visibility controls.
 function GraphEditor:onDisplayChanged()
     GraphDisplay.setOptions({
@@ -844,102 +745,152 @@ function GraphEditor:onDisplayChanged()
     }, self.draft)
 end
 
---- Validates locally and submits the complete draft as one server transaction.
+--- Refreshes the window after a merge, retaining local work and canonical geometry.
+function GraphEditor:syncLocalState()
+    self.draft, self.baseRevision = self.localState.draft, self.localState.base.revision or 0
+    self.dirty = Drafts.changed(self.localState)
+    GraphDisplay.refresh(self.draft)
+    self:refreshAll()
+    local state = self.localState
+    if state.storageError then
+        self.statusLabel:setName(WaymanLocalization.ui("StatusLocalSaveFailed", state.storageError))
+    elseif #state.conflicts > 0 then
+        self.statusLabel:setName(WaymanLocalization.ui("StatusMergeConflicts", tostring(#state.conflicts)))
+    elseif state.base.rrSync and state.base.rrSync.pending then
+        self.statusLabel:setName(WaymanLocalization.ui("StatusRRPending", state.base.rrSync.reason))
+    else
+        self.statusLabel:setName(WaymanLocalization.ui(self.dirty and "StatusDraftSaved" or "StatusSaved"))
+    end
+end
+
+--- Conflicts are reviewed before publication; Yes keeps local topology/edits,
+--- while Reload explicitly chooses the server snapshot.
+function GraphEditor:reviewConflicts()
+    local conflicts = self.localState.conflicts
+    if getDebug and getDebug() then
+        print("[RailroaderWayman] draft conflicts: " .. table.concat(conflicts, "; "))
+    end
+    local text = WaymanLocalization.ui("MergeReview", table.concat(conflicts, "\n"))
+    text = text:gsub("<", "("):gsub(">", ")"):gsub("\\n", "\n"):gsub("\n", " <LINE> ")
+    local modal = ISModalRichText:new(0, 0, 620, 360, text, true, self, function(target, button)
+        if button.internal == "YES" then
+            Drafts.resolveLocal(target.localState)
+            target:syncLocalState()
+        end
+    end)
+    modal:initialise()
+    modal:addToUIManager()
+end
+
+--- Submits one atomic topology/geometry transaction. Broadcasts never confirm it.
 function GraphEditor:onAccept()
+    if self.awaitingSave then return end
+    local state = self.localState
+    local confirmed = ModData.get(WORLD_DATA_KEY)
+    if state and confirmed then
+        Drafts.rebase(state, confirmed)
+        self:syncLocalState()
+        if #state.conflicts > 0 then self:reviewConflicts(); return end
+        if state.storageError then return end
+    end
     for _, blocks in pairs(self.draft.edges) do
         if #blocks == 0 then self.statusLabel:setName(WaymanLocalization.ui("StatusEmptyEdge")) return end
     end
-    local confirmed = ModData.get(WORLD_DATA_KEY)
     if confirmed then
-        local valid, reason = GraphData.validateDraft(confirmed, self.draft)
+        local valid, reason = GraphData.validateDraft(confirmed, self.draft, RRGraph.externalEdges())
         if not valid then self.statusLabel:setName(WaymanLocalization.ui("StatusCannotSave", tostring(reason))) return end
+    end
+    local submittedDraft = GraphData.copy(self.draft)
+    submittedDraft.debug = nil
+    local geometry = state and GraphData.copy(state.geometry) or nil
+    local requestId = tostring(getTimestampMs and getTimestampMs() or 0) .. ":" .. tostring(state and state.sequence or 0)
+    if state then
+        state.pending = {requestId=requestId,draft=GraphData.copy(submittedDraft),geometry=GraphData.copy(geometry)}
+        if not Drafts.save(state) then self:syncLocalState(); return end
     end
     self.statusLabel:setName(WaymanLocalization.ui("StatusSaving"))
     self.awaitingSave = true
     if isClient() then
-        local player = getSpecificPlayer(0) or getPlayer()
-        sendClientCommand(player, "RailroaderWayman", "applyGraph", {
-            revision = self.baseRevision,
-            draft = self.draft,
+        sendClientCommand(getSpecificPlayer(0) or getPlayer(), "RailroaderWayman", "applyGraph", {
+            revision=self.baseRevision,draft=submittedDraft,geometryEdits=geometry,requestId=requestId,
         })
     else
-        local ok, reason = RailroaderWaymanEntityRuntime.ApplyGraphDraft(self.draft, self.baseRevision)
-        if not ok then
-            self:onRejected(reason)
-        else
-            self:onWorldData(ModData.get(WORLD_DATA_KEY))
-        end
+        local ok, result = RailroaderWaymanEntityRuntime.ApplyGraphDraft(submittedDraft, self.baseRevision, geometry)
+        self:onResult({requestId=requestId,ok=ok,reason=not ok and result or nil,
+            worldData=ok and result or ModData.get(WORLD_DATA_KEY)})
     end
 end
 
---- Discards the draft and requests a fresh authoritative graph snapshot.
 function GraphEditor:onReload()
+    if self.awaitingSave then return end
     self.reloadPending = true
     self.statusLabel:setName(WaymanLocalization.ui("StatusReloading"))
-    if isClient() then
-        ModData.request(WORLD_DATA_KEY)
-        return
-    end
+    if isClient() then ModData.request(WORLD_DATA_KEY); return end
     self:onWorldData(ModData.get(WORLD_DATA_KEY))
 end
 
---- Discards the local draft by closing the editor without submission.
-function GraphEditor:onCancel()
-    self:discardAndClose()
-end
+--- Cancel closes the window; only Reload explicitly discards persisted work.
+function GraphEditor:onCancel() self:close() end
 
---- Hides the editor while retaining its draft for the next open action.
 function GraphEditor:close()
     self:saveWindowState()
+    if self.localState then Drafts.save(self.localState) end
     self:setVisible(false)
 end
 
---- Remembers this editor's bounds for the remainder of the game session.
 function GraphEditor:saveWindowState()
-    Controller.windowState = {
-        x = self.x,
-        y = self.y,
-        width = self.width,
-        height = self.height,
-    }
+    Controller.windowState = {x=self.x,y=self.y,width=self.width,height=self.height}
 end
 
---- Explicitly discards the draft and destroys the singleton editor instance.
 function GraphEditor:discardAndClose()
-    self:saveWindowState()
-    self:setVisible(false)
-    self:removeFromUIManager()
-    if Controller.instance == self then Controller.instance = nil end
-    GraphDisplay.refresh(ModData.get(WORLD_DATA_KEY))
+    self:onReload()
+    self:close()
 end
 
---- Displays a server rejection and allows the user to continue editing.
 function GraphEditor:onRejected(reason)
     self.awaitingSave = false
+    if self.localState then Drafts.save(self.localState) end
     self.statusLabel:setName(WaymanLocalization.ui("StatusRejected", tostring(reason)))
 end
 
---- Replaces a pending draft after authoritative save confirmation arrives.
-function GraphEditor:onWorldData(data)
-    if type(data) ~= "table" then
-        if self.reloadPending then
-            self.reloadPending = false
-            self.statusLabel:setName(WaymanLocalization.ui("StatusNoServerData"))
-        end
+function GraphEditor:onResult(args)
+    local state = self.localState
+    if state and (not state.pending or args.requestId ~= state.pending.requestId) then return end
+    self.awaitingSave = false
+    if not args.ok then
+        if state and type(args.worldData) == "table" then self:onWorldData(args.worldData) end
+        self:onRejected(args.reason)
         return
     end
-    if not self.reloadPending and not self.awaitingSave then return end
-    if self.awaitingSave and not self.reloadPending
-        and (data.revision or 0) <= self.baseRevision then return end
-    local wasReload = self.reloadPending
-    self.reloadPending = false
-    self.awaitingSave = false
-    self.baseRevision = data.revision or 0
-    self.draft = GraphData.copy(data)
-    GraphDisplay.refresh(self.draft)
-    self.dirty = false
-    self.statusLabel:setName(wasReload and WaymanLocalization.ui("StatusReloaded") or WaymanLocalization.ui("StatusSaved"))
-    self:refreshAll()
+    if type(args.worldData) ~= "table" then return end
+    if state then
+        local sent = state.pending
+        -- Keep any edit made after sending, including geometry on the same owner.
+        for owner, edit in pairs(sent.geometry or {}) do
+            if RailroaderWaymanDraftMerge.equal(edit, state.geometry[owner]) then state.geometry[owner] = nil end
+        end
+        state.base = GraphData.copy(sent.draft)
+        for owner, nodeDraft in pairs(state.nodeDrafts) do nodeDraft.baseGeometry = Drafts.ownerGeometry(sent.draft, owner) end
+        state.pending, state.remote, state.conflictVersions, state.conflicts = nil, nil, nil, {}
+        Drafts.rebase(state, args.worldData)
+        local latest = ModData.get(WORLD_DATA_KEY)
+        if latest and latest.revision > args.worldData.revision then Drafts.rebase(state, latest) end
+        self:syncLocalState()
+    else
+        self.baseRevision, self.draft = args.worldData.revision, GraphData.copy(args.worldData)
+        self.dirty = false
+        self:refreshAll()
+    end
+end
+
+function GraphEditor:onWorldData(data)
+    if type(data) ~= "table" then return end
+    if self.localState then
+        if self.reloadPending then Drafts.reset(self.localState, data)
+        else Drafts.rebase(self.localState, data) end
+        self.reloadPending = false
+        self:syncLocalState()
+    end
 end
 
 --- Constructs a resizable editor with an isolated copy of confirmed graph data.
@@ -949,8 +900,9 @@ function GraphEditor:new(x, y, width, height, data)
     o.resizable = true
     o.minimumWidth = 700
     o.minimumHeight = 420
-    o.draft = GraphData.copy(GraphData.ensure(data or {}))
-    o.baseRevision = o.draft.revision or 0
+    o.localState = Drafts.open(GraphData.ensure(data or {}))
+    o.draft = o.localState.draft
+    o.baseRevision = o.localState.base.revision or 0
     o.tempCounter = 0
     o.dirty = false
     o:setWantKeyEvents(true)
@@ -962,6 +914,8 @@ function Controller.open(data)
     if Controller.instance then
         Controller.instance:setVisible(true)
         Controller.instance:bringToTop()
+        Controller.instance:onWorldData(data or ModData.get(WORLD_DATA_KEY))
+        Controller.instance:refreshSwitchEdgeCombos()
         return Controller.instance
     end
     local x, y, width, height = windowBounds(Controller.windowState, 700, 560)
@@ -969,6 +923,7 @@ function Controller.open(data)
     editor:initialise()
     editor:addToUIManager()
     Controller.instance = editor
+    editor:syncLocalState()
     return editor
 end
 
@@ -1011,12 +966,26 @@ end
 
 --- Delivers authoritative global data to the active editor, when present.
 function Controller.onWorldData(data)
-    if Controller.instance then Controller.instance:onWorldData(data) end
+    if type(data) == "table" and RailroaderWaymanEntityDebug and RailroaderWaymanEntityDebug.onWorldData then
+        RailroaderWaymanEntityDebug.onWorldData(data)
+    end
+    if Controller.instance then Controller.instance:onWorldData(data)
+    elseif Drafts and Drafts.current() and type(data) == "table" then Drafts.rebase(Drafts.current(), data) end
+    if RailroaderWaymanNodeEditor and RailroaderWaymanNodeEditor.onWorldData then
+        RailroaderWaymanNodeEditor.onWorldData(data)
+    end
 end
 
 --- Delivers an authoritative graph rejection to the active editor.
 function Controller.onRejected(reason)
     if Controller.instance then Controller.instance:onRejected(reason) end
+end
+
+function Controller.onResult(args)
+    if Controller.instance then Controller.instance:onResult(args) end
+    if args and args.ok and RailroaderWaymanNodeEditor and RailroaderWaymanNodeEditor.onWorldData then
+        RailroaderWaymanNodeEditor.onWorldData(args.worldData)
+    end
 end
 
 return Controller

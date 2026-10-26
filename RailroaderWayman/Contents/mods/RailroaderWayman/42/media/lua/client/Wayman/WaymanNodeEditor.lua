@@ -1,5 +1,7 @@
 -- Editor for the relative geometry stored on one physical Wayman entity.
 require "Wayman/WaymanEntityDescriptor"
+require "Wayman/WaymanLocalDraft"
+require "Wayman/WaymanGraphEditor"
 require "Wayman/WaymanWorldHighlights"
 require "Wayman/WaymanLocalization"
 require "Wayman/WaymanNodeBlockTable"
@@ -12,8 +14,8 @@ require "ISUI/ISPanel"
 RailroaderWaymanNodeEditor = RailroaderWaymanNodeEditor or {}
 local Controller = RailroaderWaymanNodeEditor
 local Descriptor = RailroaderWaymanEntityDescriptor
+local Drafts = RailroaderWaymanLocalDraft
 local Highlights = RailroaderWaymanWorldHighlights
-local OBJECT_DATA_KEY = "railroaderWayman"
 local HIGHLIGHT_GROUP = "node-editor"
 local HOVER_HIGHLIGHT_GROUP = "node-editor-hover"
 local SPACING, BUTTON_H = 10, 25
@@ -90,6 +92,34 @@ local function readBlocks(instance)
         add("divergingNodes", false)
     end
     return blocks
+end
+
+-- Object modData and a graph acknowledgement can arrive in either order in MP.
+-- Read the canonical graph plus local overrides instead of stale object fields.
+local function viewData(instance, state)
+    local owner = instance.data.id
+    local saved = state.nodeDrafts[Drafts.nodeKey(instance)] or (owner and state.geometry[owner])
+    if saved and saved.entityName == instance.entityName and saved.facing == instance.facing then
+        return copy(saved.data or saved.modData)
+    end
+    local geometry = owner and Drafts.ownerGeometry(state.remote or state.base, owner)
+    if not geometry or RailroaderWaymanGraphData.isEmpty(geometry.blocks) then return instance.data end
+    local result = {id=owner}
+    local fields = {nodes="nodes",at="at",through="throughNodes",diverge="divergingNodes"}
+    for id, field in pairs(fields) do
+        local block = geometry.blocks[owner .. ":" .. id]
+        if block then
+            local value = id == "at" and block.nodes[1] or block.nodes
+            local default = instance.defaults[field]
+            local fallback = (id == "through" or id == "diverge") and (not default or #default == 0)
+                and RailroaderWaymanDraftMerge.equal(value, {instance.defaults.at})
+            if not fallback and not RailroaderWaymanDraftMerge.equal(value, default) then result[field] = copy(value) end
+        end
+    end
+    if geometry.switch and not RailroaderWaymanDraftMerge.equal(geometry.switch.place, instance.defaults.switch) then
+        result.switch = copy(geometry.switch.place)
+    end
+    return result
 end
 
 --- @class WaymanNodeEditor: ISCollapsableWindowJoypad
@@ -196,7 +226,7 @@ function NodeEditor:createChildren()
     self.reloadButton = addButton(self, self.width - 310, actionY, 90,
         WaymanLocalization.ui("Reload"), self, self.onReload)
     self.applyButton = addButton(self, self.width - 210, actionY, 90,
-        WaymanLocalization.ui("Apply"), self, self.onApply)
+        WaymanLocalization.ui("StageGeometry"), self, self.onApply)
     self.closeButton = addButton(self, self.width - 110, actionY, 90,
         WaymanLocalization.ui("Cancel"), self, self.close)
     for _, button in ipairs({ self.reloadButton, self.applyButton, self.closeButton }) do
@@ -294,7 +324,17 @@ end
 
 function NodeEditor:setDirty()
     self.dirty = true
-    self.statusLabel:setName(WaymanLocalization.ui("StatusUnsavedChanges"))
+    self.statusLabel:setName(WaymanLocalization.ui("StatusDraftSaved"))
+    if self.localState then
+        local owner = Drafts.nodeKey(self.instance)
+        local previous = self.localState.nodeDrafts[owner]
+        local baseline = previous and previous.baseGeometry or Drafts.ownerGeometry(self.localState.remote or self.localState.base, self.instance.data.id)
+        self.localState.nodeDrafts[owner] = {data=self:submittedData(),
+            entityName=self.instance.entityName,facing=self.instance.facing,origin=copy(self.instance.origin),
+            baseGeometry=baseline,unregistered=RailroaderWaymanGraphData.isEmpty(baseline.blocks)}
+        local ok, reason = Drafts.save(self.localState)
+        if not ok then self.statusLabel:setName(WaymanLocalization.ui("StatusLocalSaveFailed", tostring(reason))) end
+    end
     self:refreshBlockList()
     self:refreshHighlights()
 end
@@ -429,32 +469,64 @@ function NodeEditor:submittedData()
     return data
 end
 
--- Uses the same updateRailEntity command and SaveGeometry path as the context action.
+-- Stage locally so several entity adjustments can be published together.
 function NodeEditor:onApply()
+    if not getDebug() then return end
     local master = self.instance.master
     local square = master and master:getSquare()
     if not square then return end
+    if self.instance.data.id then
+        local current = ModData.get("RailroaderWayman_World")
+        if current then Drafts.rebase(self.localState, current) end
+        local ok, reason = Drafts.stageGeometry(self.localState, self.instance, self:submittedData())
+        if not ok then
+            self.statusLabel:setName(WaymanLocalization.ui("StatusLocalSaveFailed", tostring(reason)))
+            return
+        end
+        self.dirty = false
+        local editor = RailroaderWaymanGraphEditor.open(current)
+        editor:syncLocalState()
+        self.statusLabel:setName(WaymanLocalization.ui("StatusGeometryStaged"))
+        return
+    end
+    -- A physical entity missing its registration still uses explicit recovery.
     local args = {
         x = square:getX(), y = square:getY(), z = square:getZ(),
         objectIndex = master:getObjectIndex(),
         facing = self.instance.facing,
+        componentIndex = self.instance.componentIndex,
         modData = self:submittedData(),
+        requestId = "entity:" .. tostring(getTimestampMs()) .. ":" .. tostring(self.localState.sequence or 0),
     }
+    self.entityRequestId = args.requestId
     self.statusLabel:setName(WaymanLocalization.ui("StatusSaving"))
     self.awaitingSave = true
     if isClient() then
         sendClientCommand(getSpecificPlayer(self.playerNum) or getPlayer(),
             "RailroaderWayman", "updateRailEntity", args)
     elseif RailroaderWaymanEntityRuntime then
-        local ok, result = RailroaderWaymanEntityRuntime.SaveGeometry(master, args.modData, args.facing)
+        local ok, result = RailroaderWaymanEntityRuntime.SaveGeometry(
+            master, args.modData, args.facing, args.componentIndex)
         self:onSaveResult(ok, result)
     end
 end
 
--- Reload is deliberately local: the object modData is the authoritative source requested here.
+-- Discard only this entity's local work and read current canonical geometry.
 function NodeEditor:onReload()
     if self.editingNode then self:cancelNodeEditing() end
-    self.instance.data = self.instance.master:getModData()[OBJECT_DATA_KEY] or {}
+    if self.localState then
+        self.localState.nodeDrafts[Drafts.nodeKey(self.instance)] = nil
+    end
+    if self.localState and self.instance.data.id then
+        self.localState.geometry[self.instance.data.id] = nil
+        local current = ModData.get("RailroaderWayman_World")
+        -- Discard also restores preview geometry when the authority is unchanged.
+        if current then Drafts.rebase(self.localState, current, true) end
+        if RailroaderWaymanGraphEditor.instance then RailroaderWaymanGraphEditor.instance:syncLocalState() end
+    end
+    if self.localState then Drafts.save(self.localState) end
+    self.instance.data = Descriptor.instanceData(self.instance)
+    self.instance.data = viewData(self.instance, self.localState)
     self.blocks = readBlocks(self.instance)
     self.selectedBlock = nil
     self.dirty = false
@@ -467,7 +539,12 @@ function NodeEditor:onSaveResult(ok, reason)
     if not self.awaitingSave then return end
     self.awaitingSave = false
     if ok then
-        self.instance.data = self.instance.master:getModData()[OBJECT_DATA_KEY] or {}
+        self.localState.nodeDrafts[Drafts.nodeKey(self.instance)] = nil
+        local submitted = self:submittedData()
+        local received = Descriptor.instanceData(self.instance)
+        submitted.id = reason
+        self.instance.data = received.id == reason and received or submitted
+        Drafts.save(self.localState)
         self.blocks = readBlocks(self.instance)
         self.selectedBlock = nil
         self.dirty = false
@@ -505,9 +582,11 @@ function NodeEditor:new(x, y, width, height, instance, playerNum)
     o.resizable = true
     o.minimumWidth, o.minimumHeight = 620, 380
     o.instance = instance
+    o.localState = Drafts.open(RailroaderWaymanGraphData.ensure(ModData.get("RailroaderWayman_World") or {}))
+    instance.data = viewData(instance, o.localState)
     o.playerNum = playerNum or 0
     o.blocks = readBlocks(instance)
-    o.dirty = false
+    o.dirty = o.localState.nodeDrafts[Drafts.nodeKey(instance)] ~= nil
     o:updateTitle()
     o:setWantKeyEvents(true)
     return o
@@ -517,6 +596,7 @@ end
 --- @param instance WaymanEntityInstance
 --- @param playerNum integer
 function Controller.open(instance, playerNum)
+    if not getDebug() then return end
     if Controller.instance then Controller.instance:close() end
     local x, y, width, height = windowBounds(Controller.windowState, 700, 500)
     local editor = NodeEditor:new(x, y, width, height, instance, playerNum)
@@ -526,8 +606,22 @@ function Controller.open(instance, playerNum)
     return editor
 end
 
+function Controller.onWorldData(data)
+    local editor = Controller.instance
+    if not editor or type(data) ~= "table" then return end
+    local owner = editor.instance.data.id
+    if owner and RailroaderWaymanGraphData.isEmpty(Drafts.ownerGeometry(data, owner).blocks) then editor:close(); return end
+    if not editor.dirty and not editor.editingNode then
+        editor.instance.data = viewData(editor.instance, editor.localState)
+        editor.blocks = readBlocks(editor.instance)
+        editor.selectedBlock = nil
+        editor:refreshAll()
+    end
+end
+
 local function onServerCommand(module, command, args)
-    if module == "RailroaderWayman" and command == "railEntityUpdated" and Controller.instance then
+    if module == "RailroaderWayman" and command == "railEntityUpdated" and Controller.instance
+        and args and args.requestId == Controller.instance.entityRequestId then
         Controller.instance:onSaveResult(args and args.ok, args and (args.reason or args.id))
     end
 end

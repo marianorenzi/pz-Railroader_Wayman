@@ -18,6 +18,7 @@ end
 
 --- Adds diagnostic and recovery actions for eligible clicked rail tiles.
 local function onFillWorldObjectContextMenu(playerNum, context, worldobjects, test)
+    if not getDebug() then return end
     local clickedSquare
     for _, object in ipairs(worldobjects) do
         clickedSquare = object:getSquare()
@@ -25,46 +26,31 @@ local function onFillWorldObjectContextMenu(playerNum, context, worldobjects, te
     end
     if not clickedSquare then return end
 
-    local updateInstance
+    local instances
     local objects = clickedSquare:getObjects()
     for index = 0, objects:size() - 1 do
         local object = objects:get(index)
-        local candidate = EntityDescriptor.getInstance(object)
+        local candidate = EntityDescriptor.getInstances(object)
         if candidate then
-            log("candidate " .. tostring(candidate.entityName)
-                .. " facing " .. tostring(candidate.facing)
-                .. " at clicked square " .. tostring(clickedSquare:getX()) .. ","
-                .. tostring(clickedSquare:getY()) .. "," .. tostring(clickedSquare:getZ())
-                .. "; id=" .. tostring(candidate.data.id))
-
-            if candidate.defaults.kind == "turn" then
-                updateInstance = candidate
-                break
-            elseif candidate.defaults.kind == "turnout" then
-                local switch = EntityDescriptor.instanceDataValueOrDefault(candidate, "switch")
-                local expectedX = switch and candidate.origin.x + switch.x
-                local expectedY = switch and candidate.origin.y + switch.y
-                local expectedZ = switch and candidate.origin.z + (switch.z or 0)
-                if switch
-                    and clickedSquare:getX() == expectedX
-                    and clickedSquare:getY() == expectedY
-                    and clickedSquare:getZ() == expectedZ then
-                    updateInstance = candidate
-                    break
-                elseif switch then
-                    log("not switch square; expected " .. tostring(expectedX) .. ","
-                        .. tostring(expectedY) .. "," .. tostring(expectedZ))
-                else
-                    log("menu skipped: switch geometry is missing")
-                end
-            end
+            -- Debug geometry inspection is available on every tile of the
+            -- entity, even after moving its physical switch interaction point.
+            instances = candidate
+            break
         end
     end
-    if not updateInstance then return end
+    if not instances or #instances == 0 then return end
     if test then return ISWorldObjectContextMenu.setTest() end
-    if updateInstance then
-        context:addOption(getText("UI_Wayman_ContextEditNodes"), worldobjects, editRailEntity, playerNum, updateInstance)
-        log("added 'EditNodes' ContextMenu option for " .. tostring(updateInstance.data.id))
+    local label = getText("UI_Wayman_ContextEditNodes")
+    if #instances == 1 then
+        context:addOption(label, worldobjects, editRailEntity, playerNum, instances[1])
+    else
+        local option = context:addOption(label, nil, nil)
+        local submenu = ISContextMenu:getNew(context)
+        context:addSubMenu(option, submenu)
+        for index, instance in ipairs(instances) do
+            submenu:addOption(instance.data.id or (instance.defaults.kind .. " " .. tostring(index)),
+                worldobjects, editRailEntity, playerNum, instance)
+        end
     end
 end
 

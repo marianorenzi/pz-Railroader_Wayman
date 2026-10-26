@@ -1,5 +1,7 @@
 {
   "entity": "CrossingSegmentDiag",
+  "costProfile": "track",
+  "costMultiplier": 2,
   "iconFace": "N",
   "faces": {
     "E": {

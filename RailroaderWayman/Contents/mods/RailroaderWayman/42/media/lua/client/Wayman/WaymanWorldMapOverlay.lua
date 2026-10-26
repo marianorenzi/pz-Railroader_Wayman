@@ -4,13 +4,11 @@
 require "Wayman/WaymanGraphData"
 require "Wayman/WaymanGraphEditor"
 require "Wayman/WaymanGraphDisplay"
-require "Wayman/WaymanRRGraph"
 require "ISUI/Maps/ISWorldMap"
 
 local GraphData = RailroaderWaymanGraphData
 local Editor = RailroaderWaymanGraphEditor
 local GraphDisplay = RailroaderWaymanGraphDisplay
-local RRGraph = RailroaderWaymanRRGraph
 local WORLD_DATA_KEY = "RailroaderWayman_World"
 local POINT_SIZE = 5
 local POINT_BORDER = 1
@@ -22,27 +20,16 @@ local function log(message)
     print("[RailroaderWayman] WorldMapGraph: " .. message)
 end
 
---- Rebuilds RR's runtime-only route and graph registries from persistent world data.
-local function registerRRGraph(data)
-    if type(data.edges) ~= "table" or type(data.edges.wayman) ~= "table" then return end
-    local registered, reason = RRGraph.register(data)
-    if not registered then
-        log("RR route/graph registration failed: " .. tostring(reason))
-        return
-    end
-    log("registered RR route/graph at revision " .. tostring(data.revision))
-end
-
 --- Installs freshly received authoritative graph data in the client cache.
 local function storeWorldData(data)
     if type(data) ~= "table" then return false end
+    if worldData and (data.revision or 0) < (worldData.revision or 0) then return false end
     worldData = GraphData.ensure(data)
     requestPending = false
     ModData.remove(WORLD_DATA_KEY)
     ModData.add(WORLD_DATA_KEY, data)
     Editor.onWorldData(data)
-    GraphDisplay.refresh(data)
-    registerRRGraph(data)
+    GraphDisplay.refresh(Editor.getOverlayState(data).data)
     return true
 end
 
@@ -51,7 +38,6 @@ local function requestWorldData()
     local localData = ModData.get(WORLD_DATA_KEY)
     if type(localData) == "table" then
         worldData = GraphData.ensure(localData)
-        registerRRGraph(worldData)
     end
     if isClient() and not requestPending then
         requestPending = true
@@ -80,19 +66,25 @@ local function drawPoint(map, x, y, color)
         1.00, color.r, color.g, color.b)
 end
 
---- Derives a stable muted RGB color from an edge's technical ID.
+local edgeColors = {}
+
+--- Keeps similar edge IDs apart in hue and caches their stable RGB colors.
 local function edgeColor(edgeId)
+    if edgeColors[edgeId] then return edgeColors[edgeId] end
     local hash = 0
-    for index = 1, #edgeId do hash = (hash * 33 + edgeId:byte(index)) % 360 end
-    local sector = math.floor(hash / 60)
-    local fraction = (hash % 60) / 60
-    local p, q = 0.25, 0.85 - 0.60 * fraction
+    for index = 1, #edgeId do hash = (hash * 33 + edgeId:byte(index)) % 2147483647 end
+    local hue = (hash * 0.618033988749895 % 1) * 6
+    local sector = math.floor(hue)
+    local fraction = hue - sector
+    local p, q, t = 0.15, 0.80 - 0.65 * fraction, 0.15 + 0.65 * fraction
     local colors = {
-        { 0.85, q, p }, { q, 0.85, p }, { p, 0.85, q },
-        { p, q, 0.85 }, { q, p, 0.85 }, { 0.85, p, q },
+        { 0.80, t, p }, { q, 0.80, p }, { p, 0.80, t },
+        { p, q, 0.80 }, { t, p, 0.80 }, { 0.80, p, q },
     }
     local value = colors[sector + 1]
-    return { r = value[1], g = value[2], b = value[3] }
+    local color = { r = value[1], g = value[2], b = value[3] }
+    edgeColors[edgeId] = color
+    return color
 end
 
 --- Projects an absolute world node into two-dimensional map coordinates.
@@ -329,6 +321,11 @@ end
 
 --- Forwards server-side graph rejection messages to the active editor.
 local function onServerCommand(module, command, args)
+    if module == "RailroaderWayman" and command == "graphResult" then
+        if args and type(args.worldData) == "table" then storeWorldData(args.worldData) end
+        Editor.onResult(args or {})
+        return
+    end
     if module == "RailroaderWayman" and command == "graphRejected" then
         Editor.onRejected(args and args.reason or getText("UI_Wayman_UnknownServerError"))
     end
@@ -336,6 +333,9 @@ end
 
 Events.OnGameStart.Add(requestWorldData)
 Events.OnConnected.Add(requestWorldData)
+Events.OnConnected.Add(function()
+    if Editor.instance then Editor.instance.awaitingSave = false end
+end)
 Events.OnReceiveGlobalModData.Add(onReceiveGlobalModData)
 Events.OnServerCommand.Add(onServerCommand)
 

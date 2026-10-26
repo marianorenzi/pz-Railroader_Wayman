@@ -13,5 +13,7 @@
     "WaymanEntityName_SymmetricalCompactThreeWayTurnout": "Desvío simétrico compacto de tres vías",
     "WaymanEntityName_SymmetricalThreeWayTurnout": "Desvío simétrico de tres vías",
     "WaymanEntityName_TrackSegment": "Tramo de vía",
-    "WaymanEntityName_WyeTurnout": "Desvío en Y"
+    "WaymanEntityName_WyeTurnout": "Desvío en Y",
+    "Recipe_ForgeRailroadSpike": "Forjar clavo de riel",
+    "Recipe_CastRailroadSpike": "Colar clavo de riel"
 }

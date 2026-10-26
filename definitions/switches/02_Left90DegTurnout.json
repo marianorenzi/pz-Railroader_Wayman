@@ -1,15 +1,18 @@
 {
   "entity": "Left90DegTurnout",
+  "costProfile": "turnout",
+  "costMultiplier": 1,
   "iconFace": "N",
   "faces": {
     "N": {
       "width": 5,
       "height": 6,
-      "at": {"x": 2, "y": 4, "z": 0},
+      "throatFacing": "N",
+      "throughFacing": "S",
+      "divergingFacing": "E",
+      "at": {"x": 3, "y": 5, "z": 0},
       "switch": {"x": 0, "y": 0, "z": 0},
-      "divergingNodes": [
-        {"x": 5, "y": 4, "z": 0}
-      ],
+      "divergingNodes": [],
       "layers": [
         {
           "index": 0,

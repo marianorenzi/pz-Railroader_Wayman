@@ -1,0 +1,44 @@
+module RailroaderWayman
+{
+    craftRecipe ForgeRailroadSpike
+    {
+        time = 300,
+        SkillRequired = Blacksmith:2,
+        timedAction = HammerMetalStanding,
+        xpAward = Blacksmith:10,
+        Tags = PrimitiveForge,
+        category = Blacksmithing,
+        inputs
+        {
+            item 1 [Base.IronChunk],
+            item 2 tags[base:charcoal],
+            item 1 tags[base:smithinghammer] mode:keep flags[MayDegradeLight],
+            item 1 tags[base:metalworkingpliers;base:tongs] mode:keep flags[MayDegradeLight],
+            item 1 tags[base:headingtool] mode:keep,
+        }
+        outputs
+        {
+            item 1 Base.RailroadSpike,
+        }
+    }
+
+    craftRecipe CastRailroadSpike
+    {
+        time = 200,
+        SkillRequired = Blacksmith:2,
+        xpAward = Blacksmith:10,
+        Tags = Furnace,
+        category = Blacksmithing,
+        inputs
+        {
+            item 1 [Base.CeramicCrucible_Iron;Base.CeramicCrucibleSmall_Iron],
+            item 1 tags[base:charcoal],
+            item 1 tags[base:crudetongs;base:tongs] mode:keep flags[MayDegradeLight],
+            item 1 tags[base:headingtool] mode:keep,
+        }
+        outputs
+        {
+            item 1 Base.RailroadSpike,
+        }
+    }
+}

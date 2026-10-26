@@ -1,325 +1,223 @@
--- Railroader graph adapter for Wayman. It converts authoritative Wayman graph
--- data into RR's route and edge/switch definitions and owns the integration calls
--- that can later be replaced by Railroader's public additive API.
+-- Wayman's boundary to Railroader: publish only our contribution through RR.API.
+-- Both registration and edge discovery use RR.API.
 require "Wayman/WaymanGraphData"
-require "Wayman/WaymanEntityGeometry"
-
 
 RailroaderWaymanRRGraph = RailroaderWaymanRRGraph or {}
 local RRGraph = RailroaderWaymanRRGraph
 local GraphData = RailroaderWaymanGraphData
-local EntityGeometry = RailroaderWaymanEntityGeometry
-local NETWORK_ID = "wayman"
-local RAILROADER_DEFAULT_ROUTE = "main"
-local EPSILON = 1e-6
+RRGraph.PREFIX = "wayman"
+local OWN_PREFIX = RRGraph.PREFIX .. ":"
 
---- @class RailroaderNode
---- @field x number
---- @field y number
---- @field z number
---- @field name string?
---- @field open boolean?
+--- A node in absolute world coordinates, as accepted by RR.API.registerTrack.
+---@class RailroaderNode
+---@field x integer
+---@field y integer
+---@field z integer
+---@field name string?
+---@field open boolean?
+---@field tags table<string,string|number|boolean>?
 
---- @class RailroaderSwitchPlace
---- @field x number
---- @field y number
---- @field z number
---- @field sprite string?
---- @field sprites {sprite:string, dx:number, dy:number}[]?
+--- The switch's interaction tile and optional drawing metadata.
+---@class RailroaderSwitchPlace
+---@field x integer
+---@field y integer
+---@field z integer
+---@field sprite string?
+---@field sprites {sprite:string, dx:integer?, dy:integer?}[]? An empty list requests no drawing.
 
---- @class RailroaderSwitchLeg
---- @field edge string
---- @field toward string
+---@class RailroaderSwitchLeg
+---@field edge string Exported edge ID; Wayman IDs include the wayman: prefix.
+---@field toward 'start'|'end'
 
---- @class RailroaderSwitch
---- @field id string
---- @field at {x:number, y:number, z:number}
---- @field place RailroaderSwitchPlace?
---- @field throat RailroaderSwitchLeg
---- @field through RailroaderSwitchLeg
---- @field diverge RailroaderSwitchLeg
+---@class RailroaderSwitch
+---@field id string Exported switch ID, including the wayman: prefix.
+---@field at RailroaderNode
+---@field place RailroaderSwitchPlace?
+---@field throat RailroaderSwitchLeg
+---@field through RailroaderSwitchLeg
+---@field diverge RailroaderSwitchLeg
 
---- @class RailroaderRoute
+--- Wayman's contribution to RR's main network; it has no independent origin.
+---@class RailroaderGraph
+---@field edges table<string,RailroaderNode[]> Keys are exported edge IDs.
+---@field switches RailroaderSwitch[]
 
---- @class RailroaderGraph
---- @field edges table<string,RailroaderNode[]>
---- @field switches RailroaderSwitch[]
---- @field origin {edge:string, toward:string, s:number?}
+---@class WaymanRREdgeOption
+---@field id string Real exported edge ID.
+---@field label string Display label, including rr: for original RR edges.
+---@field edge string Local draft ID for Wayman, real exported ID for external edges.
+---@field external boolean? True for RR or another addon's edges; absent for Wayman.
 
---- Deep-copies plain Railroader graph definitions without sharing nested state.
-local function copyGraphValue(value, seen)
-    if type(value) ~= "table" then return value end
-    seen = seen or {}
-    if seen[value] then return seen[value] end
+--- Adds Wayman's prefix to a local draft ID.
+---@param id string
+---@return string
+function RRGraph.ownId(id)
+    return OWN_PREFIX .. id
+end
+
+--- Tests whether an exported ID belongs to Wayman.
+---@param id any
+---@return boolean
+function RRGraph.isOwnId(id)
+    return type(id) == "string" and id:sub(1, #OWN_PREFIX) == OWN_PREFIX
+end
+
+--- Copies public catalog IDs immediately; RR may reuse its returned row tables.
+---@return table<string,boolean>? edges Set of external IDs, excluding Wayman's contribution.
+---@return string? reason
+function RRGraph.externalEdges()
+    local api = RR and RR.API
+    if not api or type(api.edges) ~= "function" then
+        return nil, "Railroader edge catalog is unavailable"
+    end
+    local ok, edges = pcall(api.edges, "main", {})
+    if not ok or type(edges) ~= "table" then
+        return nil, "Railroader edge catalog is unavailable"
+    end
     local result = {}
-    seen[value] = result
-    for key, child in pairs(value) do
-        result[copyGraphValue(key, seen)] = copyGraphValue(child, seen)
+    for _, edge in ipairs(edges) do
+        if type(edge) == "table" and type(edge.id) == "string"
+            and edge.prefix ~= RRGraph.PREFIX and not RRGraph.isOwnId(edge.id) then
+            result[edge.id] = true
+        end
     end
     return result
 end
 
---- Captures Railroader's unmodified main graph once for repeatable patch rebuilds.
-local function backupMainGraph(TrackGraph)
-    if RRGraph.originalMainGraph then
-        return copyGraphValue(RRGraph.originalMainGraph)
+--- Each option's ID is the real exported ID; rr: is only a display label.
+---@param edges table<string,WaymanNodeBlock[]>? Current draft's local edges.
+---@return WaymanRREdgeOption[] options
+---@return string? reason External catalog error; local options remain available.
+function RRGraph.edgeOptions(edges)
+    local external, reason = RRGraph.externalEdges()
+    local options = {}
+    for id in pairs(external or {}) do
+        table.insert(options, {
+            id = id, label = id:find(":", 1, true) and id or "rr:" .. id,
+            edge = id, external = true,
+        })
     end
-    local original = TrackGraph.defs and TrackGraph.defs[RAILROADER_DEFAULT_ROUTE]
-    if type(original) ~= "table" then
-        return nil, "RR main graph is unavailable"
+    for id in pairs(edges or {}) do
+        table.insert(options, { id = RRGraph.ownId(id), label = RRGraph.ownId(id), edge = id })
     end
-    RRGraph.originalMainGraph = {
-        edges = copyGraphValue(original.edges or {}),
-        switches = copyGraphValue(original.switches or {}),
-        origin = copyGraphValue(original.origin
-            or { edge = RAILROADER_DEFAULT_ROUTE, toward = "end" }),
-    }
-    return copyGraphValue(RRGraph.originalMainGraph)
+    table.sort(options, function(a, b) return a.label < b.label end)
+    return options, reason
 end
 
---- Overlays switches by ID while keeping replaced RR switches in their original order.
-local function mergeSwitches(original, patch)
-    local merged = copyGraphValue(original or {})
-    local indexById = {}
-    for index, switch in ipairs(merged) do
-        if switch.id then indexById[switch.id] = index end
-    end
-    for _, switch in ipairs(patch or {}) do
-        local copied = copyGraphValue(switch)
-        local index = switch.id and indexById[switch.id] or nil
-        if index then
-            merged[index] = copied
-        else
-            table.insert(merged, copied)
-            if switch.id then indexById[switch.id] = #merged end
-        end
-    end
-    return merged
+local function localId(id)
+    return type(id) == "string" and id:match("^[%w_.%-]+$") ~= nil
 end
 
---- Builds a fresh main graph from RR's backup plus the current Wayman definition.
-local function mergeMainGraph(TrackGraph, patch)
-    local merged, reason = backupMainGraph(TrackGraph)
-    if not merged then return nil, reason end
-    for edgeId, nodes in pairs(patch.edges or {}) do
-        merged.edges[edgeId] = copyGraphValue(nodes)
+local function grid(node)
+    local function integer(value)
+        return type(value) == "number" and value == math.floor(value)
+            and value > -1e7 and value < 1e7
     end
-    merged.switches = mergeSwitches(merged.switches, patch.switches)
-    -- merged.origin = copyGraphValue(patch.origin or merged.origin)
-    return merged
+    return node and integer(node.x) and integer(node.y) and integer(node.z or 0)
 end
 
---- Writes a deterministic graph snapshot to console.txt without blocking export.
 local function logGraphJSON(label, graph)
+    -- Guard serialization too: a quiet print alone would still encode the graph.
+    -- The editor's explicit Export action has its own unrestricted JSON output.
+    if not (getDebug and getDebug()) then return end
     local json, reason = GraphData.worldDataToJSON(graph)
-    if json then
-        print("[RailroaderWayman] " .. label .. " " .. json)
-    else
-        print("[RailroaderWayman] " .. label .. "_ERROR " .. tostring(reason))
-    end
+    print("[RailroaderWayman] " .. label .. (json and (" " .. json) or ("_ERROR " .. tostring(reason))))
 end
 
---- Converts a relative switch interaction place while retaining RR sprite metadata.
-local function absolutePlace(origin, place)
-    local result = GraphData.getAbsoluteNode(origin, place)
-    if not result then return nil end
-    result.sprite = place.sprite
-    if type(place.sprites) == "table" then
-        result.sprites = copyGraphValue(place.sprites)
-    end
-    return result
-end
-
---- Copies a graph node into RR's plain absolute-coordinate representation.
---- @param node WaymanNode
---- @return WaymanNode
-local function copyNode(node)
-    return { x = node.x, y = node.y, z = node.z or 0 }
-end
-
---- Copies a complete Wayman switch leg into RR's direct leg representation.
-local function copyLeg(leg)
-    if type(leg) ~= "table" or not leg.edge or not leg.toward then return nil end
-    return { edge = leg.edge, toward = leg.toward }
-end
-
---- Finds one canonical owner block regardless of its current graph placement.
-local function findOwnerBlock(worldData, owner, blockId)
-    for _, block in ipairs(worldData.availableNodes or {}) do
-        if block.owner == owner and block.id == blockId then return block end
-    end
-    for _, blocks in pairs(worldData.edges or {}) do
-        for _, block in ipairs(blocks) do
-            if block.owner == owner and block.id == blockId then return block end
-        end
-    end
-end
-
---- Compares absolute block nodes with one static list relative to its turnout at.
-local function matchesRelativeNodes(block, absoluteAt, staticAt, staticNodes)
-    local expected = staticNodes
-    if not expected or #expected == 0 then expected = { staticAt } end
-    local nodes = GraphData.getAbsoluteNodes(block)
-    if not block or #nodes ~= #expected then return false end
-    for index, node in ipairs(nodes) do
-        local relative = expected[index]
-        if math.abs((node.x - absoluteAt.x) - (relative.x - staticAt.x)) > EPSILON
-            or math.abs((node.y - absoluteAt.y) - (relative.y - staticAt.y)) > EPSILON
-            or math.abs(((node.z or 0) - (absoluteAt.z or 0))
-                - ((relative.z or 0) - (staticAt.z or 0))) > EPSILON then
-            return false
-        end
-    end
-    return true
-end
-
---- Resolves RR's interaction place from the matching static turnout geometry.
-local function resolveStaticPlace(worldData, switch)
-    local throughBlock = findOwnerBlock(worldData, switch.owner, "through")
-    local divergeBlock = findOwnerBlock(worldData, switch.owner, "diverge")
-    local resolved
-    for _, faces in pairs(EntityGeometry) do
-        for _, geometry in pairs(faces) do
-            if geometry.kind == "turnout" and geometry.at and geometry.switch
-                and matchesRelativeNodes(throughBlock, switch.at, geometry.at,
-                    geometry.throughNodes)
-                and matchesRelativeNodes(divergeBlock, switch.at, geometry.at,
-                    geometry.divergingNodes) then
-                local candidate = {
-                    x = switch.at.x + geometry.switch.x - geometry.at.x,
-                    y = switch.at.y + geometry.switch.y - geometry.at.y,
-                    z = (switch.at.z or 0) + (geometry.switch.z or 0) - (geometry.at.z or 0),
-                }
-                if resolved and (math.abs(resolved.x - candidate.x) > EPSILON
-                    or math.abs(resolved.y - candidate.y) > EPSILON
-                    or math.abs(resolved.z - candidate.z) > EPSILON) then
-                    return nil, "static turnout geometry is ambiguous for " .. tostring(switch.id)
-                end
-                resolved = candidate
-            end
-        end
-    end
-    if not resolved then
-        return nil, "static turnout geometry was not found for " .. tostring(switch.id)
-    end
-    return resolved
-end
-
---- Converts authoritative Wayman data into one RR TrackGraph definition.
---- @param graphData WaymanGraphData
---- @return RailroaderGraph?,string?
+--- Exports ordered absolute nodes and complete switches; incomplete switches stay editable.
+---@param graphData WaymanGraphData
+---@return RailroaderGraph? definition
+---@return string? reason
 function RRGraph.export(graphData)
     if type(graphData) ~= "table" then return nil, "world data must be a table" end
     logGraphJSON("GRAPH_BEFORE_EXPORT", graphData)
     local definition = { edges = {}, switches = {} }
-
-    -- edges
     for edgeId, blocks in pairs(graphData.edges or {}) do
+        if not localId(edgeId) then return nil, "invalid Wayman edge id " .. tostring(edgeId) end
         local nodes = GraphData.getOrderedNodes(blocks)
-        if #nodes < 2 then return nil, "edge " .. tostring(edgeId) .. " has fewer than two nodes" end
-        definition.edges[edgeId] = {}
-        for _, node in ipairs(nodes) do
-            table.insert(definition.edges[edgeId], copyNode(node))
-        end
-    end
-
-    -- switches
-    for _, switch in ipairs(graphData.switches or {}) do
-        local absoluteAt = switch.at and GraphData.getAbsoluteNode(switch.origin, switch.at)
-        local legs = switch.legs or {}
-        local throat = copyLeg(legs.throat)
-        local through = copyLeg(legs.through)
-        local diverge = copyLeg(legs.diverge)
-        local configured = throat or through or diverge
-        if configured and not (switch.id and absoluteAt and throat and through and diverge) then
-            return nil, "switch " .. tostring(switch.id) .. " is incomplete"
-        end
-        if configured then
-            local exportSwitch = GraphData.copy(switch)
-            exportSwitch.at = absoluteAt
-            local place = switch.place and absolutePlace(switch.origin, switch.place)
-            local placeReason
-            if not place then
-                place, placeReason = resolveStaticPlace(graphData, exportSwitch)
+        if #nodes < 2 then return nil, "edge " .. edgeId .. " has fewer than two nodes" end
+        for index, node in ipairs(nodes) do
+            if not grid(node) then return nil, "grid: " .. edgeId .. " node " .. index end
+            if index > 1 then
+                local dx, dy = node.x - nodes[index - 1].x, node.y - nodes[index - 1].y
+                if dx == 0 and dy == 0 then return nil, "repeat: " .. edgeId .. " node " .. index end
+                if dx ~= 0 and dy ~= 0 and math.abs(dx) ~= math.abs(dy) then
+                    return nil, "angle: " .. edgeId .. " node " .. index
+                end
             end
-            if not place then return nil, placeReason end
-            table.insert(definition.switches, {
-                id = switch.id,
-                at = copyNode(absoluteAt),
-                throat = throat,
-                through = through,
-                diverge = diverge,
-                place = place,
-            })
         end
+        definition.edges[RRGraph.ownId(edgeId)] = nodes
     end
 
-    -- origin
-    local origin = graphData.origin or { edge = NETWORK_ID, toward = "end" }
-    if type(origin) ~= "table"
-        or (origin.edge ~= RAILROADER_DEFAULT_ROUTE and not definition.edges[origin.edge]) then
-        return nil, "RR origin references missing edge " .. tostring(origin and origin.edge)
+    local external, catalogReason
+    for _, switch in ipairs(graphData.switches or {}) do
+        local legs = switch.legs or {}
+        local complete = true
+        for _, name in ipairs({ "throat", "through", "diverge" }) do
+            if not legs[name] or not legs[name].edge or not legs[name].toward then complete = false end
+        end
+        if complete then
+            if not localId(switch.id) then return nil, "invalid Wayman switch id " .. tostring(switch.id) end
+            local at = GraphData.getAbsoluteNode(switch.origin, switch.at)
+            if not grid(at) then return nil, "grid: switch " .. switch.id end
+            local place = GraphData.getAbsoluteNode(switch.origin, switch.place)
+            if not grid(place) then return nil, "missing or invalid switch place: " .. switch.id end
+            place.sprite = switch.place.sprite
+            -- Wayman already builds these tiles. An empty list requests no extra
+            -- drawing while keeping place valid for RR's exact-tile interaction.
+            place.sprites = GraphData.copy(switch.place.sprites)
+            if place.sprite == nil and place.sprites == nil then place.sprites = {} end
+            local exported = { id = RRGraph.ownId(switch.id), at = at, place = place }
+            local ownLeg = false
+            for _, name in ipairs({ "throat", "through", "diverge" }) do
+                local leg = legs[name]
+                if leg.toward ~= "start" and leg.toward ~= "end" then
+                    return nil, "invalid toward: " .. switch.id .. " " .. name
+                end
+                local edge
+                if leg.external ~= true and graphData.edges[leg.edge] then
+                    edge = RRGraph.ownId(leg.edge)
+                    ownLeg = true
+                else
+                    if not external then external, catalogReason = RRGraph.externalEdges() end
+                    if not external then return nil, catalogReason end
+                    if not external[leg.edge] then return nil, "unknown external edge: " .. tostring(leg.edge) end
+                    edge = leg.edge
+                end
+                exported[name] = { edge = edge, toward = leg.toward }
+            end
+            if not ownLeg then return nil, "noleg: switch " .. switch.id end
+            table.insert(definition.switches, exported)
+        end
     end
-    if origin.toward ~= "start" and origin.toward ~= "end" then
-        return nil, "RR origin toward must be start or end"
-    end
-    definition.origin = {
-        edge = origin.edge,
-        toward = origin.toward,
-        s = origin.s,
-    }
     logGraphJSON("GRAPH_AFTER_EXPORT", definition)
     return definition
 end
 
---- Registers the primary route and current graph through RR's replaceable integration boundary.
+--- RR validates before replacing our prefix; a rejection leaves its last graph intact.
 ---@param graphData WaymanGraphData
+---@return boolean accepted
+---@return string? reason Formatted error, including RR's detail when available.
+---@return string? detail Original RR detail, when supplied on rejection.
 function RRGraph.register(graphData)
-    -- export mod graph data into Railroader Graph
+    if isClient and isClient() then return false, "client" end
+    local api = RR and RR.API
+    if not api or type(api.registerTrack) ~= "function" or type(api.unregisterTrack) ~= "function" then
+        return false, "Railroader track registration API is unavailable"
+    end
     local definition, reason = RRGraph.export(graphData)
     if not definition then return false, reason end
-
-    -- origin route/network name
-    local originName = definition.origin.edge or NETWORK_ID
-
-    -- check route dependency
-    local okRoutes, Routes = pcall(require, "Railroader/RR_Routes")
-    if not okRoutes or not Routes or not Routes.register then
-        return false, "RR.Routes is unavailable"
-    end
-
-    -- check graph dependency
-    local okTrackGraph, TrackGraph = pcall(require, "Railroader/RR_TrackGraph")
-    if not okTrackGraph or not TrackGraph or not TrackGraph.register then
-        return false, "RR.TrackGraph is unavailable"
-    end
-
-    -- register or patch graph network
-    if originName == RAILROADER_DEFAULT_ROUTE then
-        -- patch "main" graph, use existing "main" route
-        local merged, mergeReason = mergeMainGraph(TrackGraph, definition)
-        if not merged then return false, mergeReason end
-        local okRegister, result = pcall(TrackGraph.register,
-            RAILROADER_DEFAULT_ROUTE, merged)
-        if not okRegister then return false, tostring(result) end
-        return true, result
+    local empty = true
+    for _ in pairs(definition.edges) do empty = false; break end
+    local ok, accepted, why, detail
+    if empty then
+        ok, accepted, why = pcall(api.unregisterTrack, RRGraph.PREFIX)
     else
-        -- recover nodes and register route
-        local routeNodes = definition.edges[originName]
-        if not routeNodes then return false, "RR origin edge not found:" .. originName end
-
-        local okRouteRegister, routeResult = pcall(Routes.register, originName, {
-            looped = true,
-            nodes = routeNodes,
-        })
-        if not okRouteRegister then return false, tostring(routeResult) end
-
-        -- register graph
-        local okRegister, result = pcall(TrackGraph.register, NETWORK_ID, definition)
-        if not okRegister then return false, tostring(result) end
-        return true, result
+        ok, accepted, why, detail = pcall(api.registerTrack, RRGraph.PREFIX, definition)
     end
-
+    if not ok then return false, tostring(accepted) end
+    if accepted or (empty and why == "unknown") then return true end
+    return false, tostring(why or "failed") .. (detail and (": " .. tostring(detail)) or ""), detail
 end
 
 return RRGraph
