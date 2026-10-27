@@ -5,6 +5,7 @@ require "Wayman/WaymanDraftMerge"
 RailroaderWaymanLocalDraft = {}
 local Drafts, GD, Merge = RailroaderWaymanLocalDraft, RailroaderWaymanGraphData, RailroaderWaymanDraftMerge
 local session, sessionKey
+local renameContext
 
 local function identity()
     local player = getSpecificPlayer and getSpecificPlayer(0) or (getPlayer and getPlayer())
@@ -66,6 +67,98 @@ function Drafts.save(state)
     return true
 end
 
+--- Transport history is session-only. The journal stores just its applied
+--- namespace revision, never a rename log or aliases in graph snapshots.
+function Drafts.setRenameContext(context)
+    renameContext = context
+    if context then context.key = identity() end
+end
+
+function Drafts.renamedId(id, revision, current)
+    if not renameContext then return id end
+    for _, operation in ipairs(renameContext.renames) do
+        if operation.revision > revision and operation.revision <= current and id == operation.oldId then
+            id = operation.newId
+        end
+    end
+    return id
+end
+
+local function renameConflict(state, current, reason)
+    state.conflictVersions = state.conflictVersions or {base=GD.copy(state.base),localDraft=GD.copy(state.draft)}
+    state.remote, state.renameBlocked = GD.copy(current), true
+    state.conflicts = {reason}
+    Drafts.save(state)
+    return false
+end
+
+local function applyRenames(state, current)
+    if not Drafts.renameSyncEnabled then return true end
+    local revision = current.revision or 0
+    local cursor = state.renameRevision or state.base.revision or 0
+    if revision < (state.base.revision or 0) then return true end
+    if not renameContext or renameContext.key ~= identity() or renameContext.revision < revision then
+        state.renameWaiting = true
+        return false
+    end
+    state.renameWaiting = nil
+    if cursor >= revision then return true end
+    if cursor < renameContext.renameFloor then
+        if not Drafts.changed(state) and not state.pending and not state.conflictVersions then
+            state.base, state.draft = GD.copy(current), GD.copy(current)
+            state.renameRevision, state.renameBlocked = revision, nil
+            return true
+        end
+        return renameConflict(state, current,
+            "rename history unavailable for this draft; review local topology or Reload (draft preserved)")
+    end
+    local snapshots, seen = {}, {}
+    local function add(data, advance)
+        if not data then return end
+        if seen[data] then return seen[data] end
+        local edges = {}
+        for id in pairs(data.edges or {}) do edges[id] = true end
+        local snapshot = {data=data,revision=data.revision or 0,advance=advance,check={edges=edges}}
+        seen[data], snapshots[#snapshots+1] = snapshot, snapshot
+        return snapshot
+    end
+    local baseSnapshot, draftSnapshot = add(state.base,true), add(state.draft,true)
+    add(state.remote,true)
+    add(state.pending and state.pending.draft,false)
+    add(state.conflictVersions and state.conflictVersions.base,true)
+    add(state.conflictVersions and state.conflictVersions.localDraft,true)
+    local actions = {}
+    for _, operation in ipairs(renameContext.renames) do
+        if operation.revision > cursor and operation.revision <= revision then
+            if not baseSnapshot.check.edges[operation.oldId] and draftSnapshot.check.edges[operation.oldId]
+                and operation.revision > baseSnapshot.revision then
+                return renameConflict(state,current,"rename source " .. operation.oldId
+                    .. " was created locally; review identity before applying the server rename (draft preserved)")
+            end
+            for _, snapshot in ipairs(snapshots) do
+                if operation.revision > snapshot.revision then
+                    local ok, reason = GD.renameEdge(snapshot.check, operation.oldId, operation.newId, true)
+                    if not ok then
+                        return renameConflict(state,current,"rename " .. operation.oldId .. " -> "
+                            .. operation.newId .. ": " .. reason .. "; local draft preserved")
+                    end
+                    actions[#actions+1] = {snapshot=snapshot,operation=operation}
+                end
+            end
+        end
+    end
+    for _, action in ipairs(actions) do
+        local snapshot, operation = action.snapshot, action.operation
+        GD.renameEdge(snapshot.data,operation.oldId,operation.newId,true)
+        if snapshot.advance and snapshot.data.revision == operation.fromRevision then
+            snapshot.data.revision = operation.revision
+        end
+    end
+    state.renameRevision, state.renameBlocked = math.max(cursor,revision), nil
+    if #actions > 0 then Drafts.save(state) end
+    return true
+end
+
 local function blocks(data)
     local result = {}
     for _, block in ipairs(data.availableNodes) do result[block.blockId] = block end
@@ -121,6 +214,7 @@ end
 ---@param current WaymanGraphData Confirmed authoritative graph.
 ---@param force boolean? Reconcile after an explicit geometry discard at the same revision.
 function Drafts.rebase(state, current, force)
+    if not applyRenames(state, current) then return end
     local revision, baseRevision = current.revision or 0, state.base.revision or 0
     if revision == baseRevision and not force then
         -- Accept can retry a previously failed journal write without re-merging.
@@ -201,6 +295,7 @@ function Drafts.reset(state, current)
     state.base, state.draft = GD.copy(current), GD.copy(current)
     state.geometry, state.nodeDrafts, state.conflicts = {}, {}, {}
     state.pending, state.remote, state.conflictVersions = nil, nil, nil
+    state.renameRevision, state.renameBlocked, state.renameWaiting = current.revision or 0, nil, nil
     return Drafts.save(state)
 end
 
@@ -210,6 +305,8 @@ function Drafts.resolveLocal(state)
     state.draft.revision = state.base.revision
     for owner, nodeDraft in pairs(state.nodeDrafts) do nodeDraft.baseGeometry = Drafts.ownerGeometry(state.base, owner) end
     state.remote, state.conflictVersions, state.conflicts = nil, nil, {}
+    state.renameRevision, state.renameBlocked, state.renameWaiting = state.base.revision or 0, nil, nil
+    if state.pending and state.pending.acknowledged then state.pending = nil end
     return Drafts.save(state)
 end
 

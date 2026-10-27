@@ -7,14 +7,39 @@ local DEFAULT_W = 100
 local COUNT_W = 52
 local SCROLLBAR_W = 13
 
+--- Measures the optional order column using the current language/font.
+local function orderWidth(view)
+    if not view.showOrder then return 0 end
+    local manager = getTextManager()
+    return math.max(manager:MeasureStringX(UIFont.Small, WaymanLocalization.ui("Order")),
+        manager:MeasureStringX(UIFont.Small, WaymanLocalization.ui("Normal")),
+        manager:MeasureStringX(UIFont.Small, WaymanLocalization.ui("Inverted"))) + 16
+end
+
+--- Keeps technical IDs inside their column; the full ID remains in the tooltip.
+local function fitId(text, width)
+    local manager = getTextManager()
+    if manager:MeasureStringX(UIFont.Small, text) <= width then return text end
+    local length = #text
+    repeat
+        length = length - 1
+        -- Do not split a localized header or ID in the middle of a UTF-8 glyph.
+        while length > 0 and text:byte(length + 1) >= 128 and text:byte(length + 1) < 192 do
+            length = length - 1
+        end
+    until length == 0 or manager:MeasureStringX(UIFont.Small, text:sub(1, length) .. "...") <= width
+    return length > 0 and text:sub(1, length) .. "..." or ""
+end
+
 ---@class WaymanNodeBlockHeader : ISPanel
 ---@field title string
 local NodeBlockHeader = ISPanel:derive("WaymanNodeBlockHeader")
 
-function NodeBlockHeader:new(x, y, width, height, title, showDefault)
+function NodeBlockHeader:new(x, y, width, height, title, showDefault, showOrder)
     local o = ISPanel.new(self, x, y, width, height)
     o.title = title
     o.showDefault = showDefault == true
+    o.showOrder = showOrder == true
     return o
 end
 
@@ -24,14 +49,23 @@ function NodeBlockHeader:render()
     local titleX = math.max(0, math.floor((self.width - w) / 2))
     self:drawText(self.title, titleX, 3, 1, 1, 1, 1, UIFont.Small)
     -- block id
-    self:drawText(WaymanLocalization.ui("BlockId"), 8, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+    local orderW = orderWidth(self)
+    local countRight = self.width - (self.showDefault and DEFAULT_W or SCROLLBAR_W) - orderW
+    local blockTitle = WaymanLocalization.ui("BlockId")
+    if self.showOrder then blockTitle = fitId(blockTitle, countRight - COUNT_W - 16) end
+    self:drawText(blockTitle, 8, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
 
     -- nr nodes
     local t = WaymanLocalization.ui("NrNodes")
     w = getTextManager():MeasureStringX(UIFont.Small, t)
-    local countRight = self.width - (self.showDefault and DEFAULT_W or SCROLLBAR_W)
     self:drawText(t, countRight - COUNT_W + math.max(0, (COUNT_W - w) / 2),
         3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+
+    if self.showOrder then
+        t = WaymanLocalization.ui("Order")
+        w = getTextManager():MeasureStringX(UIFont.Small, t)
+        self:drawText(t, countRight + (orderW - w) / 2, 3 + ROW_H, 1, 1, 1, 1, UIFont.Small)
+    end
 
     -- default checkbox
     if self.showDefault then
@@ -48,7 +82,7 @@ end
 local NodeBlockList = ISScrollingListBox:derive("WaymanNodeBlockList")
 
 --- Creates the selectable list used for node blocks.
-function NodeBlockList:new(x, y, width, height, showDefault)
+function NodeBlockList:new(x, y, width, height, showDefault, showOrder)
     local o = ISScrollingListBox.new(self, x, y, width, height)
     o.itemheight = ROW_H
     o.selected = -1
@@ -57,6 +91,7 @@ function NodeBlockList:new(x, y, width, height, showDefault)
     o.mouseOverHighlightColor = {r = 0, g = 0, b = 0, a = 0}
     o.doDrawItem = NodeBlockList.doDrawItem
     o.showDefault = showDefault == true
+    o.showOrder = showOrder == true
     return o
 end
 
@@ -99,12 +134,20 @@ function NodeBlockList:doDrawItem(y, item, alt)
         self:drawRect(0, y, self.width, item.height, 0.25, 0.2, 0.55, 0.8)
     end
     self:drawRectBorder(0, y, self.width, item.height, 0.35, 0.7, 0.7, 0.7)
-    self:drawText(item.item.blockId, 8, y + 5, 1, 1, 1, 1, UIFont.Small)
+    local orderW = orderWidth(self)
+    local countRight = self.width - (self.showDefault and DEFAULT_W or SCROLLBAR_W) - orderW
+    local blockId = item.item.blockId
+    if self.showOrder then blockId = fitId(blockId, countRight - COUNT_W - 16) end
+    self:drawText(blockId, 8, y + 5, 1, 1, 1, 1, UIFont.Small)
     local count = tostring(#(item.item.nodes or {}))
     local countW = getTextManager():MeasureStringX(UIFont.Small, count)
-    local countRight = self.width - (self.showDefault and DEFAULT_W or SCROLLBAR_W)
     self:drawText(count, countRight - COUNT_W + math.max(0, (COUNT_W - countW) / 2),
         y + 5, 0.75, 0.75, 0.75, 1, UIFont.Small)
+    if self.showOrder then
+        local order = WaymanLocalization.ui(item.item.invertNodes and "Inverted" or "Normal")
+        local width = getTextManager():MeasureStringX(UIFont.Small, order)
+        self:drawText(order, countRight + (orderW - width) / 2, y + 5, 1, 1, 1, 1, UIFont.Small)
+    end
     if self.showDefault then
         local boxSize = 14
         local boxX = self.width - DEFAULT_W + math.floor((DEFAULT_W - boxSize) / 2)
@@ -123,11 +166,12 @@ end
 ---@field header WaymanNodeBlockHeader
 ---@field data WaymanNodeBlockList
 NodeBlockTable = ISPanel:derive("WaymanNodeBlockTable")
----@param options { showDefault: boolean }?
+---@param options { showDefault: boolean?, showOrder: boolean? }?
 function NodeBlockTable:new(x, y, width, height, title, options)
     local o = ISPanel.new(self, x, y, width, height)
     options = options or {}
     o.showDefault = options.showDefault == true
+    o.showOrder = options.showOrder == true
 
     -- events
     o.onBlockSelected = function(block, index) end
@@ -135,12 +179,12 @@ function NodeBlockTable:new(x, y, width, height, title, options)
     o.onBlockDoubleClick = function(block) end
     o.onDefaultClick = function(block, index) end
     
-    o.header = NodeBlockHeader:new(0, 0, width, ROW_H*2, title, o.showDefault)
+    o.header = NodeBlockHeader:new(0, 0, width, ROW_H*2, title, o.showDefault, o.showOrder)
     o.header:initialise()
     o.header.background = true
     o:addChild(o.header)
 
-    o.data = NodeBlockList:new(0, ROW_H*2, width, height - ROW_H * 2, o.showDefault)
+    o.data = NodeBlockList:new(0, ROW_H*2, width, height - ROW_H * 2, o.showDefault, o.showOrder)
     o.data:initialise()
     o:addChild(o.data)
 
@@ -191,5 +235,5 @@ function NodeBlockTable:clear()
 end
 
 function NodeBlockTable:addItem(name, item, tooltip)
-    self.data:addItem(name, item, tooltip)
+    self.data:addItem(name, item, tooltip or (self.showOrder and item.blockId or nil))
 end

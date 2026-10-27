@@ -17,6 +17,14 @@ local GraphData = RailroaderWaymanGraphData
 local EntityDescriptor = RailroaderWaymanEntityDescriptor
 local RRGraph = RailroaderWaymanRRGraph
 local Connections = RailroaderWaymanConnections
+-- Session-only transport metadata. Never part of global ModData/the save schema.
+local renameHistory, renameFloor, renameRequests = {}, nil, {}
+
+function RailroaderWaymanEntityRuntime.GraphSync()
+    local data = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
+    renameFloor = renameFloor or data.revision
+    return {worldData=GraphData.copy(data), renames=GraphData.copy(renameHistory), renameFloor=renameFloor}
+end
 
 --- Writes a namespaced runtime diagnostic to the Project Zomboid log.
 local function log(message)
@@ -127,9 +135,62 @@ end
 --- Broadcasts authoritative Wayman world data when running as a server.
 local function transmitWorldData()
     if isServer() and ModData.transmit then ModData.transmit(WORLD_DATA_KEY) end
-    if not isServer() and RailroaderWaymanGraphEditor then
+    if not isServer() and RailroaderWaymanGraphSync then
+        RailroaderWaymanGraphSync.receiveSnapshot(ModData.getOrCreate(WORLD_DATA_KEY))
+    elseif not isServer() and RailroaderWaymanGraphEditor then
         RailroaderWaymanGraphEditor.onWorldData(ModData.getOrCreate(WORLD_DATA_KEY))
     end
+end
+
+--- A rename publishes only the confirmed graph, never the requesting draft.
+function RailroaderWaymanEntityRuntime.RenameEdge(oldId, newId, baseRevision, requestId, player)
+    if isClient() then return false, "server authority required" end
+    local author = player or "singleplayer"
+    local requests = renameRequests[author] or {order={}}
+    renameRequests[author] = requests
+    if type(requestId) ~= "string" or requestId == "" or #requestId > 160 then
+        return false, "invalid request id"
+    end
+    newId = GraphData.edgeId(newId)
+    if not newId then return false, "invalid edge id" end
+    if requests[requestId] then
+        local previous = requests[requestId]
+        if previous.oldId ~= oldId or previous.newId ~= newId then return false, "request id reused" end
+        return true, GraphData.copy(previous)
+    end
+    local data = GraphData.ensure(ModData.getOrCreate(WORLD_DATA_KEY))
+    renameFloor = renameFloor or data.revision
+    if baseRevision ~= data.revision then return false, "graph revision changed" end
+    local valid, reason = GraphData.canRenameEdge(data, oldId, newId)
+    if not valid then return false, reason end
+    local operation = {oldId=oldId,newId=newId,fromRevision=data.revision,
+        revision=data.revision,requestId=requestId,changed=oldId ~= newId}
+    if operation.changed then
+        local staged = GraphData.copy(data)
+        GraphData.renameEdge(staged, oldId, newId)
+        staged.revision, staged.rrSync = data.revision + 1, nil
+        local accepted, why = RRGraph.register(staged)
+        if not accepted then return false, why end
+        -- Keep the authoritative block arrays themselves; RR received a detached copy.
+        GraphData.renameEdge(data, oldId, newId)
+        data.revision, data.rrSync = staged.revision, nil
+        operation.revision = data.revision
+        renameHistory[#renameHistory+1] = GraphData.copy(operation)
+        if #renameHistory > 256 then renameFloor = table.remove(renameHistory,1).revision end
+        save(true)
+    end
+    requests[requestId] = GraphData.copy(operation)
+    requests.order[#requests.order+1] = requestId
+    if #requests.order > 64 then requests[table.remove(requests.order,1)] = nil end
+    if operation.changed then
+        if isServer() and sendServerCommand then
+            local message = RailroaderWaymanEntityRuntime.GraphSync()
+            message.operation = GraphData.copy(operation)
+            sendServerCommand("RailroaderWayman", "rename", message)
+        end
+        transmitWorldData()
+    end
+    return true, operation
 end
 
 --- Rebuilds RR's runtime-only route and graph registries from saved Wayman data.
@@ -720,16 +781,22 @@ end
 --- Dispatches graph edits and manual entity-recovery commands from clients.
 local function onClientCommand(module, command, player, args)
     if module ~= "RailroaderWayman" then return end
-    if command == "applyGraph" then
+    if command == "graphSync" then
+        sendServerCommand(player, "RailroaderWayman", "graphSync", RailroaderWaymanEntityRuntime.GraphSync())
+    elseif command == "rename" then
+        local ok, result = RailroaderWaymanEntityRuntime.RenameEdge(args and args.oldId,
+            args and args.newId, args and args.revision, args and args.requestId, player)
+        local response = RailroaderWaymanEntityRuntime.GraphSync()
+        response.requestId, response.ok = args and args.requestId, ok
+        response.operation, response.reason = ok and result or nil, not ok and result or nil
+        sendServerCommand(player, "RailroaderWayman", "renameResult", response)
+    elseif command == "applyGraph" then
         local ok, reason = RailroaderWaymanEntityRuntime.ApplyGraphDraft(
             args and args.draft, args and args.revision, args and args.geometryEdits, player)
         if sendServerCommand then
-            sendServerCommand(player, "RailroaderWayman", "graphResult", {
-                requestId = args and args.requestId,
-                ok = ok,
-                reason = not ok and reason or nil,
-                worldData = ok and reason or GraphData.copy(ModData.getOrCreate(WORLD_DATA_KEY)),
-            })
+            local response = RailroaderWaymanEntityRuntime.GraphSync()
+            response.requestId, response.ok, response.reason = args and args.requestId, ok, not ok and reason or nil
+            sendServerCommand(player, "RailroaderWayman", "graphResult", response)
         end
     elseif command == "updateRailEntity" then
         local level = player and player:getAccessLevel()

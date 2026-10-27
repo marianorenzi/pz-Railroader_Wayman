@@ -3,16 +3,15 @@
 -- that opens the otherwise map-independent graph editor.
 require "Wayman/WaymanGraphData"
 require "Wayman/WaymanGraphEditor"
-require "Wayman/WaymanGraphDisplay"
+require "Wayman/WaymanGraphSync"
 require "ISUI/Maps/ISWorldMap"
 
 local GraphData = RailroaderWaymanGraphData
 local Editor = RailroaderWaymanGraphEditor
-local GraphDisplay = RailroaderWaymanGraphDisplay
+local Sync = RailroaderWaymanGraphSync
 local WORLD_DATA_KEY = "RailroaderWayman_World"
 local POINT_SIZE = 5
 local POINT_BORDER = 1
-local worldData
 local requestPending = false
 
 --- Writes a namespaced world-map diagnostic to the game log.
@@ -23,21 +22,17 @@ end
 --- Installs freshly received authoritative graph data in the client cache.
 local function storeWorldData(data)
     if type(data) ~= "table" then return false end
-    if worldData and (data.revision or 0) < (worldData.revision or 0) then return false end
-    worldData = GraphData.ensure(data)
+    local current = Sync.current()
+    if current and (data.revision or 0) < (current.revision or 0) then return false end
     requestPending = false
-    ModData.remove(WORLD_DATA_KEY)
-    ModData.add(WORLD_DATA_KEY, data)
-    Editor.onWorldData(data)
-    GraphDisplay.refresh(Editor.getOverlayState(data).data)
-    return true
+    return Sync.receiveSnapshot(data)
 end
 
 --- Loads cached graph data and requests the authoritative multiplayer copy once.
 local function requestWorldData()
     local localData = ModData.get(WORLD_DATA_KEY)
     if type(localData) == "table" then
-        worldData = GraphData.ensure(localData)
+        Sync.receiveSnapshot(localData)
     end
     if isClient() and not requestPending then
         requestPending = true
@@ -93,8 +88,7 @@ local function toUI(map, node)
 end
 
 --- Draws one ordered edge polyline.
-local function drawEdge(map, blocks, color, selected)
-    local nodes = GraphData.getOrderedNodes(blocks)
+local function drawEdge(map, nodes, color, selected)
     for index = 2, #nodes do
         local x1, y1 = toUI(map, nodes[index - 1])
         local x2, y2 = toUI(map, nodes[index])
@@ -104,12 +98,80 @@ local function drawEdge(map, blocks, color, selected)
 end
 
 --- Draws every node marker from an edge's ordered blocks.
-local function drawEdgeNodes(map, blocks, color)
-    for _, block in ipairs(blocks or {}) do
-        for _, node in ipairs(GraphData.getAbsoluteNodes(block)) do
-            local x, y = toUI(map, node)
-            drawPoint(map, x, y, color)
+local function drawEdgeNodes(map, nodes, color)
+    for _, node in ipairs(nodes) do
+        local x, y = toUI(map, node)
+        drawPoint(map, x, y, color)
+    end
+end
+
+--- Labels only the selected traversal. Indices are array positions, never graph
+--- attributes. Screen rows keep coincident/nearby labels apart and in the viewport.
+local function drawNodeLabels(map, nodes)
+    local manager = getTextManager()
+    local height = manager:getFontHeight(UIFont.Small) + 4
+    local step = height + 3
+    local right, bottom = map:getWidth() - 2, map:getHeight() - 2
+    local lastRow = math.floor((bottom - height - 2) / step)
+    if lastRow < 0 then return end
+    local rows, labels = {}, {}
+    for index, node in ipairs(nodes) do
+        local nodeX, nodeY = toUI(map, node)
+        if nodeX >= 0 and nodeY >= 0 and nodeX <= map:getWidth() and nodeY <= map:getHeight() then
+            local text = tostring(index)
+            local endpoint
+            if index == 1 then endpoint = getText("UI_Wayman_TowardStart") end
+            if index == #nodes then
+                local ending = getText("UI_Wayman_TowardEnd")
+                endpoint = endpoint and endpoint .. "/" .. ending or ending
+            end
+            if endpoint then text = text .. " (" .. endpoint .. ")" end
+            local width = manager:MeasureStringX(UIFont.Small, text) + 8
+            if width <= right - 2 then
+                local wantedX, wantedY = nodeX + 8, nodeY + 8
+                local bestX, bestY, bestRow, bestSlot, bestDistance
+                for row = 0, lastRow do
+                    local y = 2 + row * step
+                    local dy = y - wantedY
+                    if not bestDistance or dy * dy <= bestDistance then
+                        local occupied = rows[row] or {}
+                        local left = 2
+                        for slot = 1, #occupied + 1 do
+                            local limit = occupied[slot] and occupied[slot].x - 3 or right
+                            if limit - left >= width then
+                                local x = math.max(left, math.min(wantedX, limit - width))
+                                local distance = (x - wantedX) ^ 2 + dy * dy
+                                if not bestDistance or distance < bestDistance then
+                                    bestX, bestY, bestRow, bestSlot, bestDistance = x, y, row, slot, distance
+                                end
+                            end
+                            if occupied[slot] then left = occupied[slot].x + occupied[slot].width + 3 end
+                        end
+                    end
+                end
+                -- At densities exceeding the viewport's label capacity, retain
+                -- the index at its clamped anchor rather than silently dropping it.
+                local label = { text = text, width = width, nodeX = nodeX, nodeY = nodeY,
+                    x = bestX or math.max(2, math.min(wantedX, right - width)),
+                    y = bestY or math.max(2, math.min(wantedY, bottom - height)) }
+                if bestRow then
+                    rows[bestRow] = rows[bestRow] or {}
+                    table.insert(rows[bestRow], bestSlot, label)
+                end
+                labels[#labels + 1] = label
+            end
         end
+    end
+    -- Connect displaced labels to their markers before drawing opaque labels.
+    for _, label in ipairs(labels) do
+        local x = math.max(label.x, math.min(label.nodeX, label.x + label.width))
+        local y = math.max(label.y, math.min(label.nodeY, label.y + height))
+        map:drawLine(nil, label.nodeX, label.nodeY, x, y, 1, 0.8, 0, 0, 0)
+    end
+    for _, label in ipairs(labels) do
+        map:drawRect(label.x, label.y, label.width, height, 0.95, 0.05, 0.05, 0.05)
+        map:drawRectBorder(label.x, label.y, label.width, height, 0.9, 1, 0.85, 0.1)
+        map:drawText(label.text, label.x + 4, label.y + 2, 1, 1, 1, 1, UIFont.Small)
     end
 end
 
@@ -171,7 +233,7 @@ local function graphHit(map, data, state, mouseX, mouseY)
 
     -- Node markers have priority over edge segments.
     for _, block in ipairs(data.availableNodes or {}) do
-        if block.blockId == state.selectedAvailableBlockId then
+        if state.showAvailableNodes and block.blockId == state.selectedAvailableBlockId then
             selectedAvailableBlock = block
         elseif state.showAvailableNodes then
             inspectBlock(block, 1, "availableBlock")
@@ -212,23 +274,25 @@ end
 --- Renders confirmed or draft graph layers according to editor display state.
 local function drawGraph(map)
     if not map.mapAPI then return end
-    local confirmed = worldData or ModData.get(WORLD_DATA_KEY)
+    local confirmed = Sync.current()
     local state = Editor.getOverlayState(confirmed)
     local data = state.data
     if type(data) ~= "table" then return end
     local selectedEdgeBlocks
+    local selectedEdgeNodes
     local selectedEdgeBlock
     if state.showAllEdges then
         for edgeId, blocks in pairs(data.edges or {}) do
             if edgeId ~= state.selectedEdgeId or not state.showSelectedEdge then
-                drawEdge(map, blocks, edgeColor(edgeId), false)
+                drawEdge(map, GraphData.getOrderedNodes(blocks), edgeColor(edgeId), false)
             end
         end
     end
     if state.showSelectedEdge and state.selectedEdgeId
         and data.edges and data.edges[state.selectedEdgeId] then
         selectedEdgeBlocks = data.edges[state.selectedEdgeId]
-        drawEdge(map, selectedEdgeBlocks, { r = 1.0, g = 0.85, b = 0.1 }, true)
+        selectedEdgeNodes = GraphData.getOrderedNodes(selectedEdgeBlocks)
+        drawEdge(map, selectedEdgeNodes, { r = 1.0, g = 0.85, b = 0.1 }, true)
         for _, block in ipairs(selectedEdgeBlocks) do
             if block.blockId == state.selectedEdgeBlockId then selectedEdgeBlock = block break end
         end
@@ -236,7 +300,7 @@ local function drawGraph(map)
 
     local selectedBlock
     for _, block in ipairs(data.availableNodes or {}) do
-        local selected = block.blockId == state.selectedAvailableBlockId
+        local selected = state.showAvailableNodes and block.blockId == state.selectedAvailableBlockId
         if selected then
             selectedBlock = block
         elseif state.showAvailableNodes then
@@ -248,8 +312,8 @@ local function drawGraph(map)
     end
 
     -- Selected-edge nodes sit above normal available nodes.
-    if selectedEdgeBlocks then
-        drawEdgeNodes(map, selectedEdgeBlocks, { r = 1.0, g = 0.85, b = 0.1 })
+    if selectedEdgeNodes then
+        drawEdgeNodes(map, selectedEdgeNodes, { r = 1.0, g = 0.85, b = 0.1 })
     end
 
     if selectedEdgeBlock then
@@ -266,15 +330,30 @@ local function drawGraph(map)
             drawPoint(map, x, y, { r = 1.00, g = 0.20, b = 0.85 })
         end
     end
+    if selectedEdgeNodes then drawNodeLabels(map, selectedEdgeNodes) end
     drawHoverLabel(map, graphHit(map, data, state))
 end
 
 --- Opens the singleton graph editor using the latest client graph snapshot.
 local function openEditor(_map)
-    local data = worldData or ModData.get(WORLD_DATA_KEY) or {
+    local data = Sync.current() or {
         availableNodes = {}, edges = {}, switches = {}, revision = 0,
     }
     Editor.open(data)
+end
+
+local originalShowWorldMap = ISWorldMap.ShowWorldMap
+--- Raise an already open editor after vanilla adds the map, including its first
+--- creation. Forward every argument and return value of the previous handler.
+function ISWorldMap.ShowWorldMap(...)
+    local wasOpen = Editor.getOverlayState().editorOpen
+    local function afterShow(...)
+        if wasOpen and ISWorldMap_instance and ISWorldMap_instance:getIsVisible() then
+            Editor.bringToTop()
+        end
+        return ...
+    end
+    return afterShow(originalShowWorldMap(...))
 end
 
 local originalCreateChildren = ISWorldMap.createChildren
@@ -304,7 +383,7 @@ local originalOnMouseDown = ISWorldMap.onMouseDown
 --- Selects clicked graph elements and keeps the graph editor above the map.
 function ISWorldMap:onMouseDown(x, y)
     local result = originalOnMouseDown(self, x, y)
-    local confirmed = worldData or ModData.get(WORLD_DATA_KEY)
+    local confirmed = Sync.current()
     local state = Editor.getOverlayState(confirmed)
     if type(state.data) == "table" then
         local _, _, _, target = graphHit(self, state.data, state, x, y)
@@ -321,8 +400,14 @@ end
 
 --- Forwards server-side graph rejection messages to the active editor.
 local function onServerCommand(module, command, args)
+    if module ~= "RailroaderWayman" then return end
+    if command == "graphSync" or command == "rename" or command == "renameResult" then
+        if not Sync.receive(args) then return end
+        if command == "renameResult" then Editor.onRenameResult(args) end
+        return
+    end
     if module == "RailroaderWayman" and command == "graphResult" then
-        if args and type(args.worldData) == "table" then storeWorldData(args.worldData) end
+        if not Sync.receive(args) then return end
         Editor.onResult(args or {})
         return
     end
@@ -334,7 +419,9 @@ end
 Events.OnGameStart.Add(requestWorldData)
 Events.OnConnected.Add(requestWorldData)
 Events.OnConnected.Add(function()
-    if Editor.instance then Editor.instance.awaitingSave = false end
+    if Editor.instance then
+        Editor.instance.awaitingSave, Editor.instance.pendingRename = false, nil
+    end
 end)
 Events.OnReceiveGlobalModData.Add(onReceiveGlobalModData)
 Events.OnServerCommand.Add(onServerCommand)
