@@ -1,7 +1,7 @@
 name=Railroader: Wayman
 id=RailroaderWayman
 author=manoplin
-modversion=1.0.0
+modversion=1.1.0
 description=Build railway tracks, curves and turnouts for Railroader 3.0, with construction guides and a route editor (Build 42).
 require=Railroader
 versionMin=42.0.0

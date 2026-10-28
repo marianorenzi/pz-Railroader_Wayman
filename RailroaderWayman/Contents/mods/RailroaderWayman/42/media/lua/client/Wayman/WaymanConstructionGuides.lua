@@ -154,11 +154,12 @@ function Guides.update(cursor, x, y, z)
                 y=exit.y+direction[2]*step,z=exit.z,color=color}
         end
         if node then
-            -- Anchor labels beside the ghost's exit, even for offscreen targets.
+            -- Anchor each label to its guide's last drawn tile, keeping distant
+            -- targets' messages at the visible end instead of beside the ghost.
             -- A missing edge ID denotes an available node; incompatibility keys
             -- describe the blocker and receive the facing it would need to expose.
-            labels[#labels+1] = {playerNum=player,x=exit.x+direction[1]*0.5,
-                y=exit.y+direction[2]*0.5,z=exit.z,
+            labels[#labels+1] = {playerNum=player,x=exit.x+direction[1]*steps,
+                y=exit.y+direction[2]*steps,z=exit.z,
                 text=node.nodeId .. " (" .. (node.edgeId or getText("UI_Wayman_AvailableNoEdge"))
                     .. ") — " .. getText("UI_Wayman_DistanceTiles",string.format("%g",distance))
                     .. (reason and " — " .. getText(reason,direction[3]) or "")}

@@ -43,6 +43,12 @@ C.find=function(...) queries=queries+1;return find(...) end
 assert(ISBuildIsoEntity==nil)
 require "Wayman/WaymanConstructionGuides"
 local G,H=RailroaderWaymanConstructionGuides,RailroaderWaymanWorldHighlights
+local guideLabels={}
+local replaceGroup=H.replaceGroup
+H.replaceGroup=function(id,entries,labels)
+    if id=="construction:0" then guideLabels=labels or {} end
+    return replaceGroup(id,entries,labels)
+end
 assert(ISBuildIsoEntity==nil,"client loading tried to initialize the server cursor")
 if native then
     ISBuildingObject={derive=function(_,name) local c={Type=name};c.__index=c;return c end}
@@ -101,12 +107,18 @@ local function white(x,y,z)
     local entry=tile(x,y,z)
     assert(entry.r==1 and entry.g==1 and entry.b==1,"node highlight was obscured by a guide")
 end
+local function labelAt(index,x,y,z)
+    local label=assert(guideLabels[index],"missing construction guide label")
+    assert(label.x==x and label.y==y and label.z==(z or 0),
+        "label is not anchored to its guide's last visible tile")
+    tile(x,y,z)
+end
 cursor:render(100,100,0,{})
 assert(ui,"lowercase cursor facing did not create construction guides")
 draw()
 assert(#entries==18 and #texts==1 and texts[1].text=="turnout_1:at (edge_1) — 1000 tiles")
 white(106,105);white(106,1105)
-local labelX,labelY=texts[1].x,texts[1].y
+labelAt(1,106,113)
 assert(entries[1].x==106 and entries[1].y==106 and entries[1].g==1)
 assert(entries[8].y==113 and entries[9].x==105 and entries[9].y==104 and entries[9].r==1)
 for _=1,500 do cursor:render(100,100,0,{}) end
@@ -118,8 +130,7 @@ for _,length in ipairs({5,10}) do
     G.visualLength=length;cursor:render(100,100,0,{});draw()
     assert(#entries==length*2+2 and entries[length].y==105+length)
     white(106,105);white(106,1105)
-    assert(texts[1].x==labelX and texts[1].y==labelY,
-        "changing guide length moved the label away from the ghost")
+    labelAt(1,106,105+length)
 end
 G.visualLength=8
 -- Changing cursor position, face and height must invalidate only the ghost.
@@ -143,6 +154,7 @@ assert(#entries==11 and entries[1].r==1 and #texts==1,
     "red guide continued past the first occupied coordinate")
 white(106,105);white(106,107)
 assert(texts[1].text=="wall (Disponible / sin edge) — 2 tiles — Sentido incompatible (requiere N)")
+labelAt(1,106,107)
 -- Shorten both colors at nearby cardinal/diagonal nodes, including an adjacent tile.
 local wall=world.availableNodes[2]
 local diagonal={blockId="diagonal",nodes={{x=105,y=104}}}
@@ -155,8 +167,8 @@ for _,compatible in ipairs({true,false}) do
         "nearby nodes did not stop cardinal and diagonal guides")
     white(106,105);white(106,107);white(105,104)
     assert(#texts==2)
+    labelAt(1,106,107);labelAt(2,105,104)
     if compatible then
-        assert(texts[1].y==labelY,"truncating the guide moved its label to the target")
         assert(texts[1].text=="wall (Disponible / sin edge) — 2 tiles")
         assert(texts[2].text=="diagonal (Disponible / sin edge) — 1 tiles")
     else
@@ -214,6 +226,7 @@ world={revision=20}
 cursor:render(100,100,0,{});draw()
 assert(#texts==2 and texts[1].text=="RR:station (main) — 2 tiles")
 assert(texts[2].text=="RR:1 (other:branch) — 2 tiles")
+labelAt(1,106,107);labelAt(2,104,103)
 assert(tile(106,106).g==1 and tile(105,104).g==1)
 white(106,105);white(106,107);white(104,103)
 local builtBefore,queriedBefore=builds,queries
@@ -230,11 +243,23 @@ for _=1,60 do Events.OnTick.fire() end
 cursor:render(100,100,0,{});draw()
 assert(builds==builtBefore+1 and texts[1].text=="RR:station (main) — 4 tiles")
 white(106,109)
+labelAt(1,106,109)
 RR=nil
 for _=1,60 do Events.OnTick.fire() end
 cursor:render(100,100,0,{});draw()
 assert(#texts==0,"unavailable external catalog retained obsolete targets")
+-- Distant cardinal and diagonal targets keep separate labels at the visible ends.
+world={revision=21,availableNodes={
+    {blockId="far_cardinal",nodes={{x=106,y=1105}},firstFacing="N"},
+    {blockId="far_diagonal",nodes={{x=6,y=5}},firstFacing="NW"},
+}}
+cursor:render(100,100,0,{});draw()
+assert(#texts==2 and texts[1].text=="far_cardinal (Disponible / sin edge) — 1000 tiles")
+assert(texts[2].text=="far_diagonal (Disponible / sin edge) — 100 tiles — Sentido incompatible (requiere SE)")
+labelAt(1,106,113);labelAt(2,98,97)
+assert(tile(106,113).g==1 and tile(98,97).r==1)
 -- All physical ghost nodes are white, even inside a branch without its own exit.
+world={revision=22}
 name,facing="WyeTurnout","S"
 cursor:render(100,100,0,{});draw()
 white(106,105);white(106,104);white(106,103)
@@ -262,11 +287,11 @@ drag[0]=nil;Events.OnTick.fire();draw();assert(#entries==1 and #texts==0)
 drag[0]=cursor;cursor:render(100,100,0,{})
 Events.OnDisconnect.fire();draw();assert(#entries==1 and #texts==0)
 name="TrackSegment";cursor:render(100,100,0,{});draw();assert(#entries==1)
-print("PASS: vanilla render/validity, cached ghost/index, bounded highlights and ghost labels for offscreen targets")
+print("PASS: vanilla render/validity, cached ghost/index, bounded highlights and visible-end labels for offscreen targets")
 print("PASS: client load before the vanilla cursor, deferred startup and one-time hook installation")
 print("PASS: face/Z/confirmed updates, blockers, label separation, fullscreen map, cancellation and disconnect")
 print("PASS: green/red guides stop on nearby cardinal/diagonal nodes, including adjacent nodes")
-print("PASS: labels stay at the ghost's guide start when length or target distance changes")
+print("PASS: cardinal/diagonal labels follow each guide's last visible tile as length or target distance changes")
 print("PASS: red guide labels identify blockers and explain facing, missing metadata and internal edge nodes")
 print("PASS: endpoint guide color and occupied-facing reason update from the runtime edge direction")
 print("PASS: white ghost/internal/component nodes and unlimited targets take precedence over guide tiles")
