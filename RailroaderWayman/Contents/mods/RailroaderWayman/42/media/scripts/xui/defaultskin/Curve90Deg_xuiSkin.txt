@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanCurve90Deg
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = WaymanEntityName_Curve90Deg,
+            Icon = Curve90DegIcon,
+        }
+    }
+}

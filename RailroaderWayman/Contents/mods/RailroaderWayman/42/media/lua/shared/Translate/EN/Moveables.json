@@ -13,5 +13,9 @@
     "Wayman_SymmetricalCompactThreeWayTurnout": "Compact symmetrical three-way turnout",
     "Wayman_SymmetricalThreeWayTurnout": "Symmetrical three-way turnout",
     "Wayman_TrackSegment": "Track segment",
-    "Wayman_WyeTurnout": "Wye turnout"
+    "Wayman_WyeTurnout": "Wye turnout",
+    "Wayman_Left45DegCurve": "Left 45° curve (no sleepers)",
+    "Wayman_Right45DegCurve": "Right 45° curve (no sleepers)",
+    "Wayman_Curve90Deg": "90° curve (no sleepers)",
+    "Wayman_Right90DegTurnout": "Right 90-degree turnout"
 }

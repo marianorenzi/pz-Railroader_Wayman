@@ -15,5 +15,9 @@
     "WaymanEntityName_TrackSegment": "Участок пути",
     "WaymanEntityName_WyeTurnout": "Y-образная стрелка",
     "Recipe_ForgeRailroadSpike": "Выковать костыль",
-    "Recipe_CastRailroadSpike": "Отлить костыль"
+    "Recipe_CastRailroadSpike": "Отлить костыль",
+    "WaymanEntityName_Left45DegCurve": "Левая кривая 45° (без шпал)",
+    "WaymanEntityName_Right45DegCurve": "Правая кривая 45° (без шпал)",
+    "WaymanEntityName_Curve90Deg": "Кривая 90° (без шпал)",
+    "WaymanEntityName_Right90DegTurnout": "Правый стрелочный перевод на 90°"
 }

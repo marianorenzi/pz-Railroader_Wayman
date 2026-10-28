@@ -20,10 +20,15 @@ RailroaderWaymanEntityGeometry = {
     },
     Left45DegTurnoutDiag = {
         N = { at = { x = 4, y = 3, z = 0 }, switch = { x = 5, y = 0, z = 0 }, divergingNodes = {  }, throatFacing = "NW", throughFacing = "SE", divergingFacing = "E", kind = "turnout" },
+        E = { at = { x = 7, y = 1, z = 0 }, switch = { x = 8, y = 3, z = 0 }, throatFacing = "NE", throughFacing = "SW", divergingFacing = "S", kind = "turnout" },
+        S = { at = { x = 3, y = 2, z = 0 }, switch = { x = 2, y = 3, z = 0 }, throatFacing = "SE", throughFacing = "NW", divergingFacing = "W", kind = "turnout" },
         W = { at = { x = 5, y = 4, z = 0 }, switch = { x = 2, y = 1, z = 0 }, divergingNodes = {  }, throatFacing = "SW", throughFacing = "NE", divergingFacing = "N", kind = "turnout" },
     },
     Left90DegTurnout = {
         N = { at = { x = 3, y = 5, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  }, throatFacing = "N", throughFacing = "S", divergingFacing = "E", kind = "turnout" },
+        E = { at = { x = 3, y = 2, z = 0 }, switch = { x = 4, y = 3, z = 0 }, divergingNodes = { { x = 3, y = 2, z = 0 }, { x = 2, y = 3, z = 0 } }, throatFacing = "E", throughFacing = "W", divergingFacing = "S", kind = "turnout" },
+        S = { at = { x = 5, y = 6, z = 0 }, switch = { x = 2, y = 5, z = 0 }, divergingNodes = { { x = 5, y = 6, z = 0 }, { x = 1, y = 2, z = 0 } }, throatFacing = "S", throughFacing = "N", divergingFacing = "W", kind = "turnout" },
+        W = { at = { x = 2, y = 3, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = { { x = 2, y = 3, z = 0 }, { x = 4, y = 1, z = 0 } }, throatFacing = "W", throughFacing = "E", divergingFacing = "N", kind = "turnout" },
     },
     Right45DegTurnout = {
         N = { at = { x = 7, y = 2, z = 0 }, switch = { x = 4, y = 0, z = 0 }, divergingNodes = {  }, throatFacing = "N", throughFacing = "S", divergingFacing = "SW", kind = "turnout" },
@@ -33,19 +38,50 @@ RailroaderWaymanEntityGeometry = {
     },
     Right45DegTurnoutDiag = {
         N = { at = { x = 5, y = 4, z = 0 }, switch = { x = 2, y = 4, z = 0 }, divergingNodes = {  }, throatFacing = "NW", throughFacing = "SE", divergingFacing = "S", kind = "turnout" },
+        E = { at = { x = 4, y = 3, z = 0 }, switch = { x = 2, y = 0, z = 0 }, throatFacing = "NE", throughFacing = "SW", divergingFacing = "W", kind = "turnout" },
         S = { at = { x = 6, y = 5, z = 0 }, switch = { x = 7, y = 2, z = 0 }, divergingNodes = {  }, throatFacing = "SE", throughFacing = "NW", divergingFacing = "N", kind = "turnout" },
         W = { at = { x = 4, y = 3, z = 0 }, switch = { x = 6, y = 4, z = 0 }, divergingNodes = {  }, throatFacing = "SW", throughFacing = "NE", divergingFacing = "E", kind = "turnout" },
     },
     SymmetricalCompactThreeWayTurnout = {
+        N = { components = { { type = "turnout", at = { x = 4, y = 2, z = 0 }, switch = { x = 1, y = 0, z = 0 }, divergingNodes = { { x = 4, y = 2, z = 0 }, { x = 2, y = 4, z = 0 } }, throughNodes = { { x = 4, y = 3, z = 0 }, { x = 5, y = 4, z = 0 } }, throatFacing = "N" }, { type = "turnout", at = { x = 5, y = 4, z = 0 }, switch = { x = 0, y = 1, z = 0 }, divergingNodes = { { x = 5, y = 4, z = 0 }, { x = 4, y = 3, z = 0 } }, throughNodes = {  }, throatFacing = "E" }, { type = "turnout", at = { x = 2, y = 4, z = 0 }, switch = { x = 6, y = 1, z = 0 }, divergingNodes = { { x = 2, y = 4, z = 0 }, { x = 4, y = 2, z = 0 } }, throughNodes = {  }, throatFacing = "W" } } },
+        S = { components = { { type = "turnout", at = { x = 6, y = 2, z = 0 }, switch = { x = 0, y = 3, z = 0 }, divergingNodes = { { x = 6, y = 2, z = 0 }, { x = 5, y = 3, z = 0 } }, throughNodes = {  }, throatFacing = "E" }, { type = "turnout", at = { x = 1, y = 2, z = 0 }, switch = { x = 7, y = 3, z = 0 }, divergingNodes = { { x = 1, y = 2, z = 0 }, { x = 5, y = 6, z = 0 } }, throughNodes = {  }, throatFacing = "W" }, { type = "turnout", at = { x = 5, y = 6, z = 0 }, switch = { x = 6, y = 4, z = 0 }, divergingNodes = { { x = 5, y = 3, z = 0 }, { x = 6, y = 2, z = 0 } }, throughNodes = { { x = 5, y = 6, z = 0 }, { x = 1, y = 2, z = 0 } }, throatFacing = "S" } } },
         W = { components = { { type = "turnout", at = { x = 5, y = 4, z = 0 }, switch = { x = 2, y = 0, z = 0 }, divergingNodes = {  }, throatFacing = "N" }, { type = "turnout", at = { x = 5, y = 4, z = 0 }, switch = { x = 0, y = 1, z = 0 }, divergingNodes = {  }, throatFacing = "W" }, { type = "turnout", at = { x = 5, y = 4, z = 0 }, switch = { x = 2, y = 7, z = 0 }, divergingNodes = {  }, throatFacing = "S" } } },
         E = { components = { { type = "turnout", at = { x = 3, y = 5, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  }, throatFacing = "N" }, { type = "turnout", at = { x = 3, y = 5, z = 0 }, switch = { x = 5, y = 2, z = 0 }, divergingNodes = {  }, throatFacing = "E" }, { type = "turnout", at = { x = 3, y = 5, z = 0 }, switch = { x = 0, y = 6, z = 0 }, divergingNodes = {  }, throatFacing = "S" } } },
     },
     SymmetricalThreeWayTurnout = {
+        N = { components = { { type = "turnout", at = { x = 8, y = 1, z = 0 }, switch = { x = 9, y = 0, z = 0 }, divergingNodes = { { x = 8, y = 1, z = 0 }, { x = 2, y = 7, z = 0 } }, throughNodes = { { x = 8, y = 3, z = 0 }, { x = 12, y = 7, z = 0 } }, throatFacing = "N" }, { type = "turnout", at = { x = 12, y = 7, z = 0 }, switch = { x = 0, y = 4, z = 0 }, divergingNodes = { { x = 12, y = 7, z = 0 }, { x = 8, y = 3, z = 0 } }, throughNodes = {  }, throatFacing = "E" }, { type = "turnout", at = { x = 2, y = 7, z = 0 }, switch = { x = 13, y = 4, z = 0 }, divergingNodes = { { x = 2, y = 7, z = 0 }, { x = 8, y = 1, z = 0 } }, throughNodes = {  }, throatFacing = "W" } } },
         W = { components = { { type = "turnout", at = { x = 10, y = 3, z = 0 }, switch = { x = 7, y = 0, z = 0 }, divergingNodes = {  }, throughNodes = {  }, throatFacing = "N" }, { type = "turnout", at = { x = 2, y = 9, z = 0 }, switch = { x = 0, y = 6, z = 0 }, divergingNodes = { { x = 3, y = 9, z = 0 }, { x = 4, y = 9, z = 0 } }, throughNodes = {  }, throatFacing = "W" }, { type = "turnout", at = { x = 10, y = 17, z = 0 }, switch = { x = 7, y = 17, z = 0 }, divergingNodes = {  }, throughNodes = {  }, throatFacing = "S" } } },
         S = { components = { { type = "turnout", at = { x = 1, y = 2, z = 0 }, switch = { x = 0, y = 3, z = 0 }, divergingNodes = {  }, throughNodes = {  }, throatFacing = "W" }, { type = "turnout", at = { x = 12, y = 2, z = 0 }, switch = { x = 13, y = 3, z = 0 }, divergingNodes = {  }, throughNodes = {  }, throatFacing = "E" }, { type = "turnout", at = { x = 8, y = 9, z = 0 }, switch = { x = 5, y = 7, z = 0 }, divergingNodes = {  }, throughNodes = { { x = 8, y = 8, z = 0 }, { x = 8, y = 6, z = 0 } }, throatFacing = "S" } } },
         E = { components = { { type = "turnout", at = { x = 2, y = 3, z = 0 }, switch = { x = 3, y = 0, z = 0 }, divergingNodes = {  }, throughNodes = {  }, throatFacing = "N" }, { type = "turnout", at = { x = 7, y = 8, z = 0 }, switch = { x = 8, y = 5, z = 0 }, divergingNodes = {  }, throughNodes = { { x = 6, y = 8, z = 0 } }, throatFacing = "E" }, { type = "turnout", at = { x = 2, y = 12, z = 0 }, switch = { x = 3, y = 13, z = 0 }, divergingNodes = {  }, throughNodes = {  }, throatFacing = "S" } } },
     },
     WyeTurnout = {
+        N = { at = { x = 6, y = 2, z = 0 }, switch = { x = 3, y = 0, z = 0 }, divergingNodes = {  }, throughNodes = { { x = 6, y = 3, z = 0 }, { x = 6, y = 4, z = 0 } }, throatFacing = "N", throughFacing = "SE", divergingFacing = "SW", kind = "turnout" },
+        E = { at = { x = 5, y = 4, z = 0 }, switch = { x = 6, y = 1, z = 0 }, divergingNodes = {  }, throughNodes = { { x = 4, y = 4, z = 0 } }, throatFacing = "E", throughFacing = "SW", divergingFacing = "NW", kind = "turnout" },
         S = { at = { x = 6, y = 5, z = 0 }, switch = { x = 3, y = 4, z = 0 }, divergingNodes = {  }, throughNodes = { { x = 6, y = 4, z = 0 }, { x = 6, y = 3, z = 0 } }, throatFacing = "S", throughFacing = "NE", divergingFacing = "NW", kind = "turnout" },
+        W = { at = { x = 2, y = 3, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = {  }, throughNodes = {  }, throatFacing = "W", throughFacing = "SE", divergingFacing = "NE", kind = "turnout" },
+    },
+    Right90DegTurnout = {
+        N = { at = { x = 3, y = 2, z = 0 }, switch = { x = 0, y = 0, z = 0 }, divergingNodes = { { x = 3, y = 2, z = 0 }, { x = 1, y = 4, z = 0 } }, throatFacing = "N", throughFacing = "S", divergingFacing = "W", kind = "turnout" },
+        E = { at = { x = 3, y = 4, z = 0 }, switch = { x = 4, y = 1, z = 0 }, divergingNodes = { { x = 3, y = 4, z = 0 }, { x = 2, y = 3, z = 0 } }, throatFacing = "E", throughFacing = "W", divergingFacing = "N", kind = "turnout" },
+        S = { at = { x = 2, y = 3, z = 0 }, switch = { x = 3, y = 4, z = 0 }, divergingNodes = { { x = 2, y = 3, z = 0 }, { x = 3, y = 2, z = 0 } }, throatFacing = "S", throughFacing = "N", divergingFacing = "E", kind = "turnout" },
+        W = { at = { x = 1, y = 2, z = 0 }, switch = { x = 0, y = 3, z = 0 }, divergingNodes = { { x = 1, y = 2, z = 0 }, { x = 5, y = 6, z = 0 } }, throatFacing = "W", throughFacing = "E", divergingFacing = "S", kind = "turnout" },
+    },
+    Left45DegCurve = {
+        N = { nodes = { { x = 2, y = 3, z = 0 } }, nodesFacing = "N,SE", kind = "turn" },
+        E = { nodes = { { x = 4, y = 2, z = 0 } }, nodesFacing = "E,SW", kind = "turn" },
+        S = { nodes = { { x = 5, y = 4, z = 0 } }, nodesFacing = "S,NW", kind = "turn" },
+        W = { nodes = { { x = 1, y = 2, z = 0 } }, nodesFacing = "W,NE", kind = "turn" },
+    },
+    Right45DegCurve = {
+        N = { nodes = { { x = 5, y = 1, z = 0 } }, nodesFacing = "N,SW", kind = "turn" },
+        E = { nodes = { { x = 4, y = 3, z = 0 } }, nodesFacing = "E,NW", kind = "turn" },
+        S = { nodes = { { x = 2, y = 1, z = 0 } }, nodesFacing = "S,NE", kind = "turn" },
+        W = { nodes = { { x = 1, y = 2, z = 0 } }, nodesFacing = "W,SE", kind = "turn" },
+    },
+    Curve90Deg = {
+        N = { nodes = { { x = 2, y = 3, z = 0 }, { x = 3, y = 4, z = 0 } }, nodesFacing = "N,E", kind = "turn" },
+        E = { nodes = { { x = 2, y = 3, z = 0 }, { x = 3, y = 2, z = 0 } }, nodesFacing = "S,E", kind = "turn" },
+        S = { nodes = { { x = 5, y = 6, z = 0 }, { x = 1, y = 2, z = 0 } }, nodesFacing = "S,W", kind = "turn" },
+        W = { nodes = { { x = 3, y = 1, z = 0 }, { x = 1, y = 3, z = 0 } }, nodesFacing = "N,W", kind = "turn" },
     },
 }

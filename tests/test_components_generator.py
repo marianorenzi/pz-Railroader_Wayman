@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -120,8 +121,24 @@ class ComponentsGeneratorTest(unittest.TestCase):
                             "--turns", str(ROOT / "definitions/turns"),
                             "--turnouts", str(ROOT / "definitions/switches"),
                             "--output", str(output)], check=True, capture_output=True)
-            self.assertEqual(output.read_bytes(), (ROOT / "RailroaderWayman/Contents/mods/"
-                             "RailroaderWayman/42/media/lua/shared/Wayman/WaymanEntityGeometry.lua").read_bytes())
+            shipped = (ROOT / "RailroaderWayman/Contents/mods/RailroaderWayman/42/media/lua/shared/"
+                       "Wayman/WaymanEntityGeometry.lua").read_text()
+            # Source definitions can contain turnout faces awaiting art generation.
+            # Compare every published face; curves have their own rebuild test.
+            for path in (ROOT / "definitions/curves").glob("*.json"):
+                entity = json.loads(path.read_text())["entity"]
+                shipped = re.sub(rf"^    {re.escape(entity)} = \{{\n.*?^    \}},\n", "", shipped, flags=re.M | re.S)
+            def faces(text):
+                return {entity: dict(re.findall(r"^        ([NESW]) = (.*),$", block, re.M))
+                        for entity, block in re.findall(r"^    (\w+) = \{\n(.*?)^    \},\n", text, re.M | re.S)}
+            generated = faces(output.read_text())
+            published = faces(shipped)
+            self.assertTrue(published)
+            for entity, orientations in published.items():
+                self.assertTrue(orientations, entity)
+                for facing, value in orientations.items():
+                    with self.subTest(entity=entity, facing=facing):
+                        self.assertEqual(generated[entity][facing], value)
 
     def test_facing_contract_and_validation(self):
         curve = {"nodes": [{"x": 1, "y": 2}], "nodesFacing": "N, SE"}

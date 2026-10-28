@@ -27,6 +27,18 @@ module RailroaderWayman
                 }
             }
 
+            face E
+            {
+                layer
+                {
+                    row = false false railroader_wayman_switches_15_6 railroader_wayman_switches_15_7 railroader_wayman_switches_15_8 railroader_wayman_switches_15_9 railroader_wayman_switches_15_10 railroader_wayman_switches_15_11 railroader_wayman_switches_15_12,
+                    row = railroader_wayman_switches_15_13 railroader_wayman_switches_15_14 railroader_wayman_switches_15_15 railroader_wayman_switches_15_16 railroader_wayman_switches_15_17 railroader_wayman_switches_15_18 railroader_wayman_switches_15_19 railroader_wayman_switches_15_20 false,
+                    row = false railroader_wayman_switches_15_21 railroader_wayman_switches_15_22 railroader_wayman_switches_15_23 railroader_wayman_switches_15_24 railroader_wayman_switches_15_25 railroader_wayman_switches_15_26 false false,
+                    row = railroader_wayman_switches_15_27 railroader_wayman_switches_15_28 railroader_wayman_switches_15_29 railroader_wayman_switches_15_30 railroader_wayman_switches_15_31 railroader_wayman_switches_15_32 false false false,
+                    row = false false false false false false false false false,
+                }
+            }
+
             face S
             {
                 layer

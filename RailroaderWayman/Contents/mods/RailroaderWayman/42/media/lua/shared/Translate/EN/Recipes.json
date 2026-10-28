@@ -15,5 +15,9 @@
     "WaymanEntityName_TrackSegment": "Track segment",
     "WaymanEntityName_WyeTurnout": "Wye turnout",
     "Recipe_ForgeRailroadSpike": "Forge railroad spike",
-    "Recipe_CastRailroadSpike": "Cast railroad spike"
+    "Recipe_CastRailroadSpike": "Cast railroad spike",
+    "WaymanEntityName_Left45DegCurve": "Left 45° curve (no sleepers)",
+    "WaymanEntityName_Right45DegCurve": "Right 45° curve (no sleepers)",
+    "WaymanEntityName_Curve90Deg": "90° curve (no sleepers)",
+    "WaymanEntityName_Right90DegTurnout": "Right 90-degree turnout"
 }

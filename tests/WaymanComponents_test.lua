@@ -109,9 +109,9 @@ for _, name in ipairs({"SymmetricalCompactThreeWayTurnout", "SymmetricalThreeWay
         created[#created + 1] = {master=master,data=data,origin=origin}
     end
 end
-assert(#created == 5 and #world.availableNodes == 45 and #world.switches == 15)
+assert(#created == 8 and #world.availableNodes == 72 and #world.switches == 24)
 assert(GD.isEmpty(world.edges), "constructing components invented connections")
-assert(world.nextTurnoutId == 16 and publications == 0)
+assert(world.nextTurnoutId == 25 and publications == 0)
 assert(not runtime.SaveGeometry(created[1].master, {}), "compound recovery needs a component selection")
 
 -- Persist physical modData and WorldData independently, as on save/chunk reload.
@@ -131,8 +131,8 @@ RailroaderWaymanEntityGeometry.MixedComponents = {N={components={
 local mixed, mixedData = object("MixedComponents","N",{x=3000,y=3000,z=0})
 construct(mixed)
 assert(mixedData.railroaderWayman.components[1].id == "turn_1")
-assert(mixedData.railroaderWayman.components[2].id == "turnout_16")
-assert(block("turn_1","nodes") and block("turnout_16","at"))
+assert(mixedData.railroaderWayman.components[2].id == "turnout_25")
+assert(block("turn_1","nodes") and block("turnout_25","at"))
 
 local entry = created[1]
 local first, second, third = table.unpack(entry.data.railroaderWayman.components)
@@ -292,12 +292,12 @@ runtime.OnRemove(entry.master)
 for _, component in ipairs(entry.data.railroaderWayman.components) do
     assert(not block(component.id,"at") and not switch(component.id))
 end
-assert(block("turn_1","nodes") and block("turnout_16","at"), "removal affected another physical entity")
+assert(block("turn_1","nodes") and block("turnout_25","at"), "removal affected another physical entity")
 local exported = reload(world)
 assert(#exported.switches == #world.switches and #exported.availableNodes == #world.availableNodes)
 assert(GD.isEmpty(world.edges), "component editing created connections")
 print = originalPrint
-print("PASS: all five compound faces register three independent server-owned turnouts without connections")
+print("PASS: all eight compound faces register three independent server-owned turnouts without connections")
 print("PASS: stable serialized identities, relative geometry, mixed types and coincident coordinates")
 print("PASS: component selection, isolated node drafts and coordinated updates preserve sibling state")
 print("PASS: MP recovery selects the component and handles acknowledgement before physical modData")

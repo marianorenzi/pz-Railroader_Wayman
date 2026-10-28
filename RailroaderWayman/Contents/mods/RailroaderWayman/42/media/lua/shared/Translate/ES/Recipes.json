@@ -15,5 +15,9 @@
     "WaymanEntityName_TrackSegment": "Tramo de vía",
     "WaymanEntityName_WyeTurnout": "Desvío en Y",
     "Recipe_ForgeRailroadSpike": "Forjar clavo de riel",
-    "Recipe_CastRailroadSpike": "Colar clavo de riel"
+    "Recipe_CastRailroadSpike": "Colar clavo de riel",
+    "WaymanEntityName_Left45DegCurve": "Curva izquierda de 45° (sin durmientes)",
+    "WaymanEntityName_Right45DegCurve": "Curva derecha de 45° (sin durmientes)",
+    "WaymanEntityName_Curve90Deg": "Curva de 90° (sin durmientes)",
+    "WaymanEntityName_Right90DegTurnout": "Desvío derecho de 90 grados"
 }

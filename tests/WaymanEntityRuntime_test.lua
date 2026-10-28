@@ -110,19 +110,21 @@ local function mockObject(entityName, facing, origin)
 end
 
 local supported = {
+    { "Left45DegCurve", { "N", "E", "S", "W" } },
+    { "Right45DegCurve", { "N", "E", "S", "W" } },
+    { "Curve90Deg", { "N", "E", "S", "W" } },
     { "Left45DegTurn", { "N", "S", "E", "W" } },
     { "Right45DegTurn", { "N", "S", "E", "W" } },
-    { "Right45DegTurnoutDiag", { "N", "S", "W" } },
-    { "WyeTurnout", { "S" } },
+    { "Right45DegTurnoutDiag", { "N", "E", "S", "W" } },
+    { "Right90DegTurnout", { "N", "E", "S", "W" } },
+    { "WyeTurnout", { "N", "E", "S", "W" } },
     { "Right45DegTurnout", { "N", "E", "S", "W" } },
     { "Left45DegTurnout", { "N", "S", "E", "W" } },
-    { "Left90DegTurnout", { "N" } },
-    { "Left45DegTurnoutDiag", { "N", "W" } },
+    { "Left90DegTurnout", { "N", "E", "S", "W" } },
+    { "Left45DegTurnoutDiag", { "N", "E", "S", "W" } },
 }
 
 local missingGeometry = {
-    { "SymmetricalThreeWayTurnout", { "N" } },
-    { "SymmetricalCompactThreeWayTurnout", { "N", "S" } },
     { "UnknownRailEntity", { "W", "E" } },
 }
 
@@ -133,6 +135,7 @@ RailroaderWaymanEntityGeometry.Right45DegTurnoutDiag.N.throughNodes = {}
 local created = {}
 local expectedBlocks = 0
 local expectedSwitches = 0
+local skippedCount = 0
 
 for _, entity in ipairs(supported) do
     local entityName, facings = entity[1], entity[2]
@@ -154,6 +157,7 @@ end
 
 for _, entity in ipairs(missingGeometry) do
     for _, facing in ipairs(entity[2]) do
+        skippedCount = skippedCount + 1
         local origin = { x = random(8000, 12000), y = random(7000, 11000), z = random(0, 2) }
         local object, objectData = mockObject(entity[1], facing, origin)
         RailroaderWaymanEntityRuntime.OnCreate({ thumpable = object, facing = facing })
@@ -169,7 +173,7 @@ assertTrue(result, "global modData was not created")
 assertTrue(result.entities == nil, "global modData must not contain entities")
 assertEqual(#result.availableNodes, expectedBlocks, "available node block count")
 assertEqual(#result.switches, expectedSwitches, "switch count")
-assertEqual(worldTransmissions, #created - 5, "global modData transmission count")
+assertEqual(worldTransmissions, #created - skippedCount, "global modData transmission count")
 
 local registeredOnLoad
 RailroaderWaymanRRGraph.register = function(data)
@@ -286,7 +290,7 @@ for _, message in ipairs(logs) do
         missingLogs = missingLogs + 1
     end
 end
-assertEqual(missingLogs, 5, "missing geometry log count")
+assertEqual(missingLogs, skippedCount, "missing geometry log count")
 
 -- Replaying OnCreate for an initialized master must not duplicate global data.
 local replay = created[1]
@@ -294,7 +298,7 @@ RailroaderWaymanEntityRuntime.OnCreate({ thumpable = replay.object, facing = "N"
 tickHandlers[1]()
 assertEqual(#result.availableNodes, expectedBlocks, "idempotent available node count")
 assertEqual(#result.switches, expectedSwitches, "idempotent switch count")
-assertEqual(worldTransmissions, #created - 5, "idempotent global transmission count")
+assertEqual(worldTransmissions, #created - skippedCount, "idempotent global transmission count")
 
 local removedOwner = replay.data.railroaderWayman.id
 local removedBlock = findBlock(removedOwner, "nodes")
@@ -388,8 +392,8 @@ assertEqual(result.revision, revisionBeforeRemoval + 1, "revision after entity r
 assertEqual(worldTransmissions, transmissionsBeforeRemoval + 1, "removal transmission count")
 
 print = originalPrint
-originalPrint("PASS: registered " .. tostring(#created - 5) .. " supported entity orientations")
-originalPrint("PASS: skipped and logged 5 unsupported entity orientations")
+originalPrint("PASS: registered " .. tostring(#created - skippedCount) .. " supported entity orientations")
+originalPrint("PASS: skipped and logged " .. tostring(skippedCount) .. " unsupported entity orientations")
 originalPrint("PASS: " .. tostring(#result.availableNodes) .. " availableNodes, "
     .. tostring(#result.switches) .. " switches, no entities collection")
 originalPrint("PASS: removed entity data atomically")
