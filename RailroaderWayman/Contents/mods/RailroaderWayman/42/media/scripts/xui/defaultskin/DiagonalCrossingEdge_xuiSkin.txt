@@ -6,7 +6,7 @@ module Base
         {
             LuaWindowClass = ISEntityWindow,
             DisplayName = WaymanEntityName_DiagonalCrossingEdge,
-            Icon = Build_FloorTileWood,
+            Icon = DiagonalCrossingEdgeIcon,
         }
     }
 }

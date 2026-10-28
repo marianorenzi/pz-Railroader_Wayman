@@ -13,5 +13,9 @@
     "Wayman_SymmetricalCompactThreeWayTurnout": "Desvío simétrico compacto de tres vías",
     "Wayman_SymmetricalThreeWayTurnout": "Desvío simétrico de tres vías",
     "Wayman_TrackSegment": "Tramo de vía",
-    "Wayman_WyeTurnout": "Desvío en Y"
+    "Wayman_WyeTurnout": "Desvío en Y",
+    "Wayman_Left45DegCurve": "Curva izquierda de 45° (sin durmientes)",
+    "Wayman_Right45DegCurve": "Curva derecha de 45° (sin durmientes)",
+    "Wayman_Curve90Deg": "Curva de 90° (sin durmientes)",
+    "Wayman_Right90DegTurnout": "Desvío derecho de 90 grados"
 }

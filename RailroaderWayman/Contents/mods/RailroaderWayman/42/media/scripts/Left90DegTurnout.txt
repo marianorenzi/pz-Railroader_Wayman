@@ -18,12 +18,49 @@ module RailroaderWayman
             {
                 layer
                 {
-                    row = railroader_wayman_switches_11_49 railroader_wayman_switches_11_50 railroader_wayman_switches_11_51 railroader_wayman_switches_11_52 false,
-                    row = false railroader_wayman_switches_11_53 railroader_wayman_switches_11_54 railroader_wayman_switches_11_55 false,
-                    row = false railroader_wayman_switches_11_56 railroader_wayman_switches_11_57 railroader_wayman_switches_11_58 railroader_wayman_switches_11_59,
-                    row = false railroader_wayman_switches_11_60 railroader_wayman_switches_11_61 railroader_wayman_switches_11_62 railroader_wayman_switches_11_63,
-                    row = false railroader_wayman_switches_12_0 railroader_wayman_switches_12_1 railroader_wayman_switches_12_2 railroader_wayman_switches_12_3,
-                    row = false railroader_wayman_switches_12_4 railroader_wayman_switches_12_5 railroader_wayman_switches_12_6 railroader_wayman_switches_12_7,
+                    row = railroader_wayman_switches_11_49 railroader_wayman_switches_11_50 railroader_wayman_switches_11_51 railroader_wayman_switches_11_52 false false,
+                    row = false railroader_wayman_switches_11_53 railroader_wayman_switches_11_54 railroader_wayman_switches_11_55 false false,
+                    row = false railroader_wayman_switches_11_56 railroader_wayman_switches_11_57 railroader_wayman_switches_11_58 railroader_wayman_switches_11_59 false,
+                    row = false railroader_wayman_switches_11_60 railroader_wayman_switches_11_61 railroader_wayman_switches_11_62 railroader_wayman_switches_11_63 false,
+                    row = false railroader_wayman_switches_12_0 railroader_wayman_switches_12_1 railroader_wayman_switches_12_2 railroader_wayman_switches_12_3 false,
+                    row = false railroader_wayman_switches_12_4 railroader_wayman_switches_12_5 railroader_wayman_switches_12_6 railroader_wayman_switches_12_7 false,
+                }
+            }
+
+            face E
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_14_30 railroader_wayman_switches_14_31 railroader_wayman_switches_14_32 railroader_wayman_switches_14_33 railroader_wayman_switches_14_34,
+                    row = railroader_wayman_switches_14_35 railroader_wayman_switches_14_36 railroader_wayman_switches_14_37 railroader_wayman_switches_14_38 railroader_wayman_switches_14_39,
+                    row = railroader_wayman_switches_14_40 railroader_wayman_switches_14_41 railroader_wayman_switches_14_42 railroader_wayman_switches_14_43 railroader_wayman_switches_14_44,
+                    row = railroader_wayman_switches_14_45 false railroader_wayman_switches_14_46 railroader_wayman_switches_14_47 railroader_wayman_switches_14_48,
+                    row = railroader_wayman_switches_14_49 false railroader_wayman_switches_14_50 false false,
+                }
+            }
+
+            face S
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_17_51 railroader_wayman_switches_17_55 false railroader_wayman_switches_17_56 railroader_wayman_switches_17_57 railroader_wayman_switches_17_62,
+                    row = false false railroader_wayman_switches_17_63 railroader_wayman_switches_18_18 railroader_wayman_switches_18_19 railroader_wayman_switches_18_20,
+                    row = railroader_wayman_switches_18_62 railroader_wayman_switches_18_63 false railroader_wayman_switches_19_3 railroader_wayman_switches_19_4 railroader_wayman_switches_19_5,
+                    row = false railroader_wayman_switches_19_6 railroader_wayman_switches_19_7 railroader_wayman_switches_20_50 railroader_wayman_switches_20_51 railroader_wayman_switches_20_52,
+                    row = false false railroader_wayman_switches_20_53 railroader_wayman_switches_20_54 railroader_wayman_switches_20_55 railroader_wayman_switches_20_56,
+                    row = false false railroader_wayman_switches_20_57 railroader_wayman_switches_20_58 railroader_wayman_switches_20_59 railroader_wayman_switches_20_60,
+                }
+            }
+
+            face W
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_14_51 railroader_wayman_switches_14_52 railroader_wayman_switches_14_53 false railroader_wayman_switches_14_54,
+                    row = railroader_wayman_switches_14_55 railroader_wayman_switches_14_56 railroader_wayman_switches_14_57 railroader_wayman_switches_14_58 railroader_wayman_switches_14_59,
+                    row = railroader_wayman_switches_14_60 railroader_wayman_switches_14_61 railroader_wayman_switches_14_62 railroader_wayman_switches_14_63 railroader_wayman_switches_15_0,
+                    row = railroader_wayman_switches_15_1 railroader_wayman_switches_15_2 railroader_wayman_switches_15_3 railroader_wayman_switches_15_4 railroader_wayman_switches_15_5,
+                    row = false false false false false,
                 }
             }
 

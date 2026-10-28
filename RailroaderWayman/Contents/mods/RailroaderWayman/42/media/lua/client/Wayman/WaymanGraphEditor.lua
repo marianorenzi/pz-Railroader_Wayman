@@ -3,6 +3,7 @@
 -- transaction, and updates shared visualization options without owning renderers.
 require "Wayman/WaymanGraphData"
 require "Wayman/WaymanLocalDraft"
+require "Wayman/WaymanGraphSync"
 require "Wayman/WaymanRRGraph"
 require "Wayman/WaymanGraphDisplay"
 require "Wayman/WaymanLocalization"
@@ -16,12 +17,13 @@ require "ISUI/ISPanel"
 require "ISUI/ISScrollingListBox"
 require "ISUI/ISTabPanel"
 require "ISUI/ISTickBox"
-require "ISUI/ISTextEntryBox"
+require "ISUI/ISTextBox"
 
 RailroaderWaymanGraphEditor = RailroaderWaymanGraphEditor or {}
 local Controller = RailroaderWaymanGraphEditor
 local GraphData = RailroaderWaymanGraphData
 local Drafts = RailroaderWaymanLocalDraft
+local Sync = RailroaderWaymanGraphSync
 local RRGraph = RailroaderWaymanRRGraph
 local GraphDisplay = RailroaderWaymanGraphDisplay
 local WORLD_DATA_KEY = "RailroaderWayman_World"
@@ -137,6 +139,15 @@ function GraphEditor:layoutNodeLists()
         -- availableList.x, availableList.width, availableList.height
         -- assignButton, unassignButton, moveUpButton, moveDownButton, invertButton
 
+    local right = self.edgesPanel.width
+    for _, button in ipairs({self.deleteEdgeButton,self.renameEdgeButton,self.newEdgeButton}) do
+        local width = math.max(80,getTextManager():MeasureStringX(UIFont.Small,button.title) + 20)
+        right = right - width
+        button:setWidth(width)
+        button:setX(right)
+        right = right - SPACING
+    end
+    self.edgeCombo:setWidth(math.max(120,right))
     local buttonWidth = 120
     local availableWidth = self.edgesPanel.width - buttonWidth - SPACING * 2
     local listWidth = math.max(120, math.floor(availableWidth / 2))
@@ -189,7 +200,15 @@ end
 
 --- Hides the editor on Escape while preserving its current draft.
 function GraphEditor:onKeyRelease(key)
-    if self:getIsVisible() and key == Keyboard.KEY_ESCAPE then self:close() end
+    if self:getIsVisible() and key == Keyboard.KEY_ESCAPE then
+        if self.ignorePopupEscape then self.ignorePopupEscape = nil; return end
+        if self.edgePopup then self:closeEdgePopup(); return end
+        self:close()
+    end
+end
+
+function GraphEditor:onKeyPress(_key)
+    if not self.edgePopup then self.ignorePopupEscape = nil end
 end
 
 --- Constructs, initializes, and attaches a consistently sized action button.
@@ -228,21 +247,18 @@ function GraphEditor:createEdgePanel()
     self.edgeCombo = ISComboBox:new(0, 8, 300, BUTTON_H, self, self.onEdgeSelected)
     self.edgeCombo:initialise()
     self.edgesPanel:addChild(self.edgeCombo)
-    self.newEdgeId = ISTextEntryBox:new("", self.edgeCombo.width + SPACING, 8, 170, BUTTON_H)
-    self.newEdgeId:initialise()
-    self.newEdgeId:setPlaceholderText(WaymanLocalization.ui("OptionalId"))
-    self.newEdgeId:instantiate()
-    self.newEdgeId:setTooltip(WaymanLocalization.ui("OptionalIdTooltip"))
-    self.edgesPanel:addChild(self.newEdgeId)
-    self.newEdgeButton = addButton(self.edgesPanel, self.newEdgeId.x + self.newEdgeId.width + SPACING, 8, 80, WaymanLocalization.ui("New"), self, self.onNewEdge)
-    self.deleteEdgeButton = addButton(self.edgesPanel, self.newEdgeButton.x + self.newEdgeButton.width + SPACING, 8, 90, WaymanLocalization.ui("Delete"), self, self.onDeleteEdge)
+    self.newEdgeButton = addButton(self.edgesPanel, self.edgeCombo.width + SPACING, 8, 80, WaymanLocalization.ui("New"), self, self.onNewEdge)
+    self.renameEdgeButton = addButton(self.edgesPanel, self.newEdgeButton.x + 90, 8, 90,
+        WaymanLocalization.ui("Rename"), self, self.onRenameEdge)
+    self.deleteEdgeButton = addButton(self.edgesPanel, self.renameEdgeButton.x + self.renameEdgeButton.width + SPACING, 8, 90, WaymanLocalization.ui("Delete"), self, self.onDeleteEdge)
 
     local buttonWidth = 120
     local availableWidth = self.edgesPanel.width - buttonWidth - SPACING * 2
     local listWidth = math.max(120, math.floor(availableWidth / 2))
     local listHeight = self.edgesPanel.height - 43
     -- Edge node block list
-    self.edgeList = NodeBlockTable:new(0, 43, listWidth, listHeight, WaymanLocalization.ui("EdgeBlocks"))
+    self.edgeList = NodeBlockTable:new(0, 43, listWidth, listHeight,
+        WaymanLocalization.ui("EdgeBlocks"), { showOrder = true })
     self.edgeList:initialise()
     self.edgeList.onBlockSelected = function(block, index) 
         self.unassignButton:setEnable(block ~= nil)
@@ -474,6 +490,7 @@ function GraphEditor:refreshEdgeCombos(selected)
     fillEdgeCombo(self.edgeCombo, self.draft.edges, false, selected or self:getSelectedEdgeId())
     self:refreshSwitchEdgeCombos()
     self.deleteEdgeButton:setEnable(self.edgeCombo:getOptionCount() > 0)
+    if self.renameEdgeButton then self.renameEdgeButton:setEnable(self.edgeCombo:getOptionCount() > 0 and not self.pendingRename) end
 end
 
 --- Rebuilds the ordered rows for the currently selected edge.
@@ -515,8 +532,8 @@ function GraphEditor:refreshSwitches(selected)
 end
 
 --- Refreshes every tab from the current shared draft.
-function GraphEditor:refreshAll()
-    local edge = self:getSelectedEdgeId()
+function GraphEditor:refreshAll(selected)
+    local edge = selected or self:getSelectedEdgeId()
     self:refreshEdgeCombos(edge)
     self:refreshEdgeList()
     self:refreshAvailable()
@@ -563,8 +580,8 @@ function GraphEditor:selectEdgeBlockFromMap(edgeId, blockId)
 end
 
 --- Creates an empty draft edge using a validated custom or generated ID.
-function GraphEditor:onNewEdge()
-    local id = self.newEdgeId:getText():match("^%s*(.-)%s*$")
+function GraphEditor:createEdge(text)
+    local id = text:match("^%s*(.-)%s*$")
     if id == "" then
         local candidate = self.draft.nextEdgeId or 1
         repeat
@@ -572,17 +589,137 @@ function GraphEditor:onNewEdge()
             candidate = candidate + 1
         until not self.draft.edges[id]
     elseif not id:match("^[%w_.%-]+$") then
-        self.statusLabel:setName(WaymanLocalization.ui("StatusInvalidId"))
-        return
+        return false, WaymanLocalization.ui("StatusInvalidId")
     elseif self.draft.edges[id] then
-        self.statusLabel:setName(WaymanLocalization.ui("StatusEdgeExists", id))
-        return
+        return false, WaymanLocalization.ui("EdgeIdTaken")
     end
     self.draft.edges[id] = {}
-    self.newEdgeId:setText("")
     self:refreshEdgeCombos(id)
     self:onEdgeSelected()
     self:setDirty()
+    return true
+end
+
+function GraphEditor:closeEdgePopup()
+    local popup = self.edgePopup
+    self.edgePopup = nil
+    if not popup then return end
+    popup.entry:unfocus()
+    if popup.colorPicker then popup.colorPicker:removeFromUIManager() end
+    popup:destroy()
+end
+
+function GraphEditor:openEdgePopup(mode)
+    if self.edgePopup then self.edgePopup:bringToTop(); return end
+    if self.pendingRename or self.awaitingSave then return end
+    local edgeId = mode == "rename" and self:getSelectedEdgeId() or nil
+    if mode == "rename" and (not edgeId or not self.draft.edges[edgeId]) then return end
+    local width, height = 520, 220
+    local popup = ISTextBox:new(math.max(1,self.x + (self.width-width)/2),
+        math.max(1,self.y + 40),width,height,
+        WaymanLocalization.ui(mode == "rename" and "RenamePrompt" or "NewEdgePrompt"),
+        edgeId or "",self,self.onEdgePopupClick)
+    popup.mode, popup.edgeId = mode, edgeId
+    popup.renameRevision = self.localState and (self.localState.renameRevision or self.baseRevision) or 0
+    popup:initialise()
+    -- Reserve a separate error row; vanilla otherwise places errors on its buttons.
+    local errorHeight = getTextManager():getFontHeight(UIFont.Small) + 18
+    popup.yes:setY(popup.yes.y + errorHeight)
+    popup.no:setY(popup.no.y + errorHeight)
+    popup:setHeight(popup.height + errorHeight)
+    popup:setValidateFunction(self,function() return not popup.pending end)
+    popup:setValidateTooltipText(WaymanLocalization.ui("StatusRenaming"))
+    popup.entry:setTooltip(WaymanLocalization.ui("OptionalIdTooltip"))
+    popup.entry.onCommandEntered = function() popup:onClick(popup.yes) end
+    popup.entry.onOtherKey = function(_,key)
+        if key == Keyboard.KEY_ESCAPE then
+            self:closeEdgePopup()
+            self.ignorePopupEscape = true
+        end
+    end
+    popup.entry.onTextChangeFunction = function() if not popup.pending then popup:showErrorMessage(false) end end
+    popup.onKeyRelease = function(_,key)
+        if key == Keyboard.KEY_ESCAPE then self:closeEdgePopup(); self.ignorePopupEscape = true end
+    end
+    popup.isKeyConsumed = function(_,key) return key == Keyboard.KEY_ESCAPE end
+    popup:setWantKeyEvents(true)
+    popup:setAlwaysOnTop(true)
+    popup:addToUIManager()
+    self.edgePopup = popup
+    popup.entry:focus()
+end
+
+function GraphEditor:onNewEdge() self:openEdgePopup("new") end
+function GraphEditor:onRenameEdge() self:openEdgePopup("rename") end
+
+function GraphEditor:renameEdge(oldId, text)
+    local id = GraphData.edgeId(text)
+    if not id then return false,WaymanLocalization.ui("StatusInvalidId") end
+    if not self.draft.edges[oldId] then return false,WaymanLocalization.ui("RenameMissing") end
+    if oldId == id then return true end
+    if self.draft.edges[id] then return false,WaymanLocalization.ui("EdgeIdTaken") end
+    local state = self.localState
+    if state and (state.renameWaiting or state.renameBlocked or #state.conflicts > 0) then
+        return false,WaymanLocalization.ui("RenameResolveFirst")
+    end
+    if not state or not state.base.edges[oldId] then
+        GraphData.renameEdge(self.draft,oldId,id)
+        self:refreshEdgeCombos(id)
+        self:onEdgeSelected()
+        self:setDirty()
+        return true
+    end
+    if not Sync.ready() then Sync.request(); return false,WaymanLocalization.ui("StatusGraphSync") end
+    local confirmed = Sync.current()
+    if not confirmed or not confirmed.edges[oldId] then return false,WaymanLocalization.ui("RenameMissing") end
+    if confirmed.edges[id] then return false,WaymanLocalization.ui("EdgeIdTaken") end
+    self.renameSequence = (self.renameSequence or 0) + 1
+    local requestId = "rename:" .. tostring(getTimestampMs()) .. ":" .. tostring(self.renameSequence)
+        .. ":" .. tostring((getSpecificPlayer(0) or getPlayer()):getUsername())
+    self.pendingRename = {requestId=requestId,oldId=oldId,newId=id}
+    if self.renameEdgeButton then self.renameEdgeButton:setEnable(false) end
+    self.statusLabel:setName(WaymanLocalization.ui("StatusRenaming"))
+    if self.edgePopup then self.edgePopup.pending = true end
+    if isClient() then
+        sendClientCommand(getSpecificPlayer(0) or getPlayer(),"RailroaderWayman","rename",{
+            oldId=oldId,newId=id,revision=confirmed.revision,requestId=requestId,
+        })
+    else
+        local ok, result = RailroaderWaymanEntityRuntime.RenameEdge(oldId,id,confirmed.revision,requestId)
+        local response = RailroaderWaymanEntityRuntime.GraphSync()
+        response.ok, response.operation, response.reason, response.requestId = ok,ok and result or nil,not ok and result or nil,requestId
+        Sync.receive(response)
+        self:onRenameResult(response)
+    end
+    return true
+end
+
+function GraphEditor:onEdgePopupClick(button)
+    local popup = self.edgePopup
+    if not popup then return end
+    popup.showError = true -- this controller owns destruction, including async OK.
+    if button.internal ~= "OK" then self:closeEdgePopup(); return end
+    if popup.pending then return end
+    local ok, reason
+    if popup.mode == "rename" then ok,reason = self:renameEdge(popup.edgeId,popup.entry:getText())
+    else ok,reason = self:createEdge(popup.entry:getText()) end
+    if not ok then popup:showErrorMessage(true,reason)
+    elseif self.pendingRename then popup:showErrorMessage(true,WaymanLocalization.ui("StatusRenaming"))
+    else self:closeEdgePopup() end
+end
+
+function GraphEditor:onRenameResult(args)
+    if not self.pendingRename or args.requestId ~= self.pendingRename.requestId then return end
+    self.pendingRename = nil
+    if self.renameEdgeButton then self.renameEdgeButton:setEnable(self.edgeCombo:getOptionCount() > 0) end
+    if args.ok then
+        self:closeEdgePopup()
+        self.statusLabel:setName(WaymanLocalization.ui("StatusRenamed"))
+    else
+        local reason = WaymanLocalization.ui("StatusRenameFailed",tostring(args.reason))
+        if self.edgePopup then self.edgePopup.pending = nil; self.edgePopup:showErrorMessage(true,reason) end
+        self.statusLabel:setName(reason)
+    end
 end
 
 --- Deletes the selected draft edge and returns its blocks to availability.
@@ -746,13 +883,15 @@ function GraphEditor:onDisplayChanged()
 end
 
 --- Refreshes the window after a merge, retaining local work and canonical geometry.
-function GraphEditor:syncLocalState()
+function GraphEditor:syncLocalState(selected)
     self.draft, self.baseRevision = self.localState.draft, self.localState.base.revision or 0
     self.dirty = Drafts.changed(self.localState)
     GraphDisplay.refresh(self.draft)
-    self:refreshAll()
+    self:refreshAll(selected)
     local state = self.localState
-    if state.storageError then
+    if state.renameWaiting then
+        self.statusLabel:setName(WaymanLocalization.ui("StatusGraphSync"))
+    elseif state.storageError then
         self.statusLabel:setName(WaymanLocalization.ui("StatusLocalSaveFailed", state.storageError))
     elseif #state.conflicts > 0 then
         self.statusLabel:setName(WaymanLocalization.ui("StatusMergeConflicts", tostring(#state.conflicts)))
@@ -773,6 +912,7 @@ function GraphEditor:reviewConflicts()
     local text = WaymanLocalization.ui("MergeReview", table.concat(conflicts, "\n"))
     text = text:gsub("<", "("):gsub(">", ")"):gsub("\\n", "\n"):gsub("\n", " <LINE> ")
     local modal = ISModalRichText:new(0, 0, 620, 360, text, true, self, function(target, button)
+        target.conflictModal = nil
         if button.internal == "YES" then
             Drafts.resolveLocal(target.localState)
             target:syncLocalState()
@@ -780,16 +920,18 @@ function GraphEditor:reviewConflicts()
     end)
     modal:initialise()
     modal:addToUIManager()
+    self.conflictModal = modal
 end
 
 --- Submits one atomic topology/geometry transaction. Broadcasts never confirm it.
 function GraphEditor:onAccept()
-    if self.awaitingSave then return end
+    if self.awaitingSave or self.pendingRename or self.edgePopup then return end
     local state = self.localState
     local confirmed = ModData.get(WORLD_DATA_KEY)
     if state and confirmed then
         Drafts.rebase(state, confirmed)
         self:syncLocalState()
+        if state.renameWaiting then Sync.request(); return end
         if #state.conflicts > 0 then self:reviewConflicts(); return end
         if state.storageError then return end
     end
@@ -822,7 +964,8 @@ function GraphEditor:onAccept()
 end
 
 function GraphEditor:onReload()
-    if self.awaitingSave then return end
+    if self.awaitingSave or self.pendingRename then return end
+    self:closeEdgePopup()
     self.reloadPending = true
     self.statusLabel:setName(WaymanLocalization.ui("StatusReloading"))
     if isClient() then ModData.request(WORLD_DATA_KEY); return end
@@ -833,6 +976,7 @@ end
 function GraphEditor:onCancel() self:close() end
 
 function GraphEditor:close()
+    self:closeEdgePopup()
     self:saveWindowState()
     if self.localState then Drafts.save(self.localState) end
     self:setVisible(false)
@@ -857,8 +1001,19 @@ function GraphEditor:onResult(args)
     local state = self.localState
     if state and (not state.pending or args.requestId ~= state.pending.requestId) then return end
     self.awaitingSave = false
+    if state and state.renameBlocked then
+        -- An accepted wire transaction must not erase a local naming collision.
+        -- Retain all versions until the explicit conflict review resolves it.
+        state.pending.acknowledged = args.ok == true
+        Drafts.save(state)
+        self:syncLocalState()
+        return
+    end
     if not args.ok then
-        if state and type(args.worldData) == "table" then self:onWorldData(args.worldData) end
+        local latest = ModData.get(WORLD_DATA_KEY)
+        local current = latest and (not args.worldData or latest.revision > args.worldData.revision)
+            and latest or args.worldData
+        if state and type(current) == "table" then self:onWorldData(current) end
         self:onRejected(args.reason)
         return
     end
@@ -870,11 +1025,13 @@ function GraphEditor:onResult(args)
             if RailroaderWaymanDraftMerge.equal(edit, state.geometry[owner]) then state.geometry[owner] = nil end
         end
         state.base = GraphData.copy(sent.draft)
+        state.base.revision = args.worldData.revision
+        state.draft.revision = state.base.revision
         for owner, nodeDraft in pairs(state.nodeDrafts) do nodeDraft.baseGeometry = Drafts.ownerGeometry(sent.draft, owner) end
         state.pending, state.remote, state.conflictVersions, state.conflicts = nil, nil, nil, {}
-        Drafts.rebase(state, args.worldData)
         local latest = ModData.get(WORLD_DATA_KEY)
-        if latest and latest.revision > args.worldData.revision then Drafts.rebase(state, latest) end
+        local current = latest and latest.revision > args.worldData.revision and latest or args.worldData
+        Drafts.rebase(state, current, true)
         self:syncLocalState()
     else
         self.baseRevision, self.draft = args.worldData.revision, GraphData.copy(args.worldData)
@@ -886,10 +1043,20 @@ end
 function GraphEditor:onWorldData(data)
     if type(data) ~= "table" then return end
     if self.localState then
+        local previous = self.localState.renameRevision or self.localState.base.revision or 0
+        local selected = self:getSelectedEdgeId()
         if self.reloadPending then Drafts.reset(self.localState, data)
         else Drafts.rebase(self.localState, data) end
         self.reloadPending = false
-        self:syncLocalState()
+        if not self.localState.renameBlocked then
+            selected = Drafts.renamedId(selected,previous,self.localState.renameRevision or previous)
+        end
+        if self.edgePopup and self.edgePopup.mode == "rename" then
+            local id = self.edgePopup.edgeId
+            if not self.localState.draft.edges[id] or Drafts.renamedId(id,self.edgePopup.renameRevision,
+                self.localState.renameRevision or previous) ~= id then self:closeEdgePopup() end
+        end
+        self:syncLocalState(selected)
     end
 end
 
@@ -913,9 +1080,10 @@ end
 function Controller.open(data)
     if Controller.instance then
         Controller.instance:setVisible(true)
-        Controller.instance:bringToTop()
+        Controller.bringToTop()
         Controller.instance:onWorldData(data or ModData.get(WORLD_DATA_KEY))
         Controller.instance:refreshSwitchEdgeCombos()
+        if Sync and not Sync.ready() then Sync.request() end
         return Controller.instance
     end
     local x, y, width, height = windowBounds(Controller.windowState, 700, 560)
@@ -923,6 +1091,7 @@ function Controller.open(data)
     editor:initialise()
     editor:addToUIManager()
     Controller.instance = editor
+    Sync.request()
     editor:syncLocalState()
     return editor
 end
@@ -930,15 +1099,17 @@ end
 --- Exposes read-only draft/selection/display state to the map renderer.
 function Controller.getOverlayState(confirmedData)
     local editor = Controller.instance
+    local editorOpen = editor ~= nil and editor:getIsVisible() == true
     local options = GraphDisplay.getOptions()
     return {
         data = editor and editor.draft or confirmedData,
-        selectedEdgeId = editor and editor:getSelectedEdgeId() or nil,
-        selectedEdgeBlockId = editor and Controller.selectedEdgeBlockId or nil,
-        selectedAvailableBlockId = editor and Controller.selectedAvailableBlockId or nil,
+        editorOpen = editorOpen,
+        selectedEdgeId = editorOpen and editor:getSelectedEdgeId() or nil,
+        selectedEdgeBlockId = editorOpen and Controller.selectedEdgeBlockId or nil,
+        selectedAvailableBlockId = editorOpen and Controller.selectedAvailableBlockId or nil,
         showAllEdges = options.showAllEdges,
-        showAvailableNodes = options.showAvailableNodes,
-        showSelectedEdge = options.showSelectedEdge,
+        showAvailableNodes = editorOpen and options.showAvailableNodes,
+        showSelectedEdge = editorOpen and options.showSelectedEdge,
     }
 end
 
@@ -954,14 +1125,25 @@ function Controller.selectFromMap(target)
     elseif target and target.kind == "edgeBlock" then
         selected = editor:selectEdgeBlockFromMap(target.edgeId, target.blockId)
     end
-    editor:bringToTop()
+    Controller.bringToTop()
     return selected
 end
 
 --- Keeps the visible editor above the world map after map interactions.
 function Controller.bringToTop()
     local editor = Controller.instance
-    if editor and editor:getIsVisible() then editor:bringToTop() end
+    if not editor or not editor:getIsVisible() then return end
+    editor:bringToTop()
+    -- Raising a window does not change text/joypad focus. Restore its separate
+    -- vanilla popups afterwards, without giving the editor always-on-top status.
+    local modal = editor.conflictModal
+    if modal and modal:getIsVisible() then modal:bringToTop() end
+    if editor.edgePopup and editor.edgePopup:getIsVisible() then editor.edgePopup:bringToTop() end
+    local popup = ISComboBox.SharedPopup
+    -- Vanilla removes the shared popup without setting its visibility false.
+    if popup and popup.parentCombo and popup.parentCombo.expanded and popup:getIsVisible() then
+        popup:bringToTop()
+    end
 end
 
 --- Delivers authoritative global data to the active editor, when present.
@@ -986,6 +1168,16 @@ function Controller.onResult(args)
     if args and args.ok and RailroaderWaymanNodeEditor and RailroaderWaymanNodeEditor.onWorldData then
         RailroaderWaymanNodeEditor.onWorldData(args.worldData)
     end
+end
+
+function Controller.onRenameResult(args)
+    if Controller.instance then Controller.instance:onRenameResult(args) end
+end
+
+function Controller.isTyping()
+    local editor = Controller.instance
+    return editor and ((editor.edgePopup and editor.edgePopup:getIsVisible())
+        or (editor.conflictModal and editor.conflictModal:getIsVisible())) or false
 end
 
 return Controller

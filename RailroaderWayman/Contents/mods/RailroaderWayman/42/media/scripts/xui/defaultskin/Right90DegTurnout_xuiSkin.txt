@@ -1,0 +1,12 @@
+module Base
+{
+    xuiSkin default
+    {
+        entity ES_WaymanRight90DegTurnout
+        {
+            LuaWindowClass = ISEntityWindow,
+            DisplayName = WaymanEntityName_Right90DegTurnout,
+            Icon = Right90DegTurnoutIcon,
+        }
+    }
+}

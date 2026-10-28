@@ -1,0 +1,84 @@
+module RailroaderWayman
+{
+    entity Right90DegTurnout
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanRight90DegTurnout,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+            OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
+
+            face N
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_19_8 railroader_wayman_switches_19_9 railroader_wayman_switches_19_10 railroader_wayman_switches_19_11,
+                    row = railroader_wayman_switches_19_12 railroader_wayman_switches_19_13 railroader_wayman_switches_19_14 railroader_wayman_switches_19_15,
+                    row = railroader_wayman_switches_19_16 railroader_wayman_switches_19_17 railroader_wayman_switches_19_18 railroader_wayman_switches_19_19,
+                    row = false railroader_wayman_switches_19_20 railroader_wayman_switches_19_21 railroader_wayman_switches_19_22,
+                    row = railroader_wayman_switches_19_23 railroader_wayman_switches_19_24 railroader_wayman_switches_19_25 railroader_wayman_switches_19_26,
+                }
+            }
+
+            face E
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_19_27 false railroader_wayman_switches_19_28 false false false,
+                    row = railroader_wayman_switches_19_29 false railroader_wayman_switches_19_30 railroader_wayman_switches_19_31 railroader_wayman_switches_19_32 false,
+                    row = railroader_wayman_switches_19_33 railroader_wayman_switches_19_34 railroader_wayman_switches_19_35 railroader_wayman_switches_19_36 railroader_wayman_switches_19_37 false,
+                    row = railroader_wayman_switches_19_38 railroader_wayman_switches_19_39 railroader_wayman_switches_19_40 railroader_wayman_switches_19_41 railroader_wayman_switches_19_42 false,
+                    row = railroader_wayman_switches_19_43 railroader_wayman_switches_19_44 railroader_wayman_switches_19_45 railroader_wayman_switches_19_46 railroader_wayman_switches_19_47 false,
+                }
+            }
+
+            face S
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_19_48 railroader_wayman_switches_19_49 railroader_wayman_switches_19_50 railroader_wayman_switches_19_51,
+                    row = railroader_wayman_switches_19_52 railroader_wayman_switches_19_53 railroader_wayman_switches_19_54 false,
+                    row = railroader_wayman_switches_19_55 railroader_wayman_switches_19_56 railroader_wayman_switches_19_57 railroader_wayman_switches_19_58,
+                    row = railroader_wayman_switches_19_59 railroader_wayman_switches_19_60 railroader_wayman_switches_19_61 railroader_wayman_switches_19_62,
+                    row = railroader_wayman_switches_19_63 railroader_wayman_switches_20_0 railroader_wayman_switches_20_1 railroader_wayman_switches_20_2,
+                }
+            }
+
+            face W
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_20_3 railroader_wayman_switches_20_4 railroader_wayman_switches_20_5 railroader_wayman_switches_20_6 railroader_wayman_switches_20_7 railroader_wayman_switches_20_8,
+                    row = railroader_wayman_switches_20_9 railroader_wayman_switches_20_10 railroader_wayman_switches_20_11 railroader_wayman_switches_20_12 railroader_wayman_switches_20_13 railroader_wayman_switches_20_14,
+                    row = railroader_wayman_switches_20_15 railroader_wayman_switches_20_16 railroader_wayman_switches_20_17 railroader_wayman_switches_20_18 railroader_wayman_switches_20_19 railroader_wayman_switches_20_20,
+                    row = railroader_wayman_switches_20_21 railroader_wayman_switches_20_22 railroader_wayman_switches_20_23 false railroader_wayman_switches_20_24 railroader_wayman_switches_20_25,
+                    row = false false railroader_wayman_switches_20_26 railroader_wayman_switches_20_27 railroader_wayman_switches_20_28 railroader_wayman_switches_20_29,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:7;MetalWelding:5,
+            xpAward = Woodwork:30;MetalWelding:15,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 6 [Base.Plank],
+                item 4 [Base.RailroadSpike],
+                item 2 [Base.MetalBar],
+            }
+        }
+    }
+}

@@ -56,6 +56,42 @@ function GraphData.isEmpty(value)
     return true
 end
 
+--- Uses the existing local edge-ID alphabet; names and IDs are the same value.
+function GraphData.edgeId(value)
+    if type(value) ~= "string" then return nil end
+    value = value:match("^%s*(.-)%s*$")
+    if value == "" or not value:match("^[%w_.%-]+$") then return nil end
+    return value
+end
+
+--- Preflight separately so a journal can validate all its snapshots atomically.
+function GraphData.canRenameEdge(data, oldId, newId, allowMissing)
+    if type(oldId) ~= "string" or type(newId) ~= "string"
+        or GraphData.edgeId(oldId) ~= oldId or GraphData.edgeId(newId) ~= newId then
+        return false, "invalid edge id"
+    end
+    local edges = data.edges or {}
+    if oldId ~= newId and edges[newId] then return false, "edge already exists" end
+    if not edges[oldId] then return allowMissing == true, "edge no longer exists" end
+    return true
+end
+
+--- Moves one key and its own legs without visiting/rebuilding any node array.
+function GraphData.renameEdge(data, oldId, newId, allowMissing)
+    local ok, reason = GraphData.canRenameEdge(data, oldId, newId, allowMissing)
+    if not ok then return false, reason end
+    if oldId == newId then return true end
+    if data.edges[oldId] then
+        data.edges[newId], data.edges[oldId] = data.edges[oldId], nil
+    end
+    for _, switch in ipairs(data.switches or {}) do
+        for _, leg in pairs(switch.legs or {}) do
+            if leg.edge == oldId and not leg.external then leg.edge = newId end
+        end
+    end
+    return true
+end
+
 local jsonArrayFields = { availableNodes = true, switches = true, nodes = true }
 
 --- Escapes a Lua string as a compact JSON string literal.

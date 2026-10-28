@@ -65,6 +65,19 @@ local closedNodes, closedReason = RR.API.edgeNodes("other:loop", "main")
 assert(not closedNodes and closedReason == "closed")
 local external = assert(graph.externalEdges())
 assert(external.main and external["other:line"] and external["other:loop"] and not external["wayman:branch"])
+local endpointCounts={}
+local mainNodes=assert(RR.API.edgeNodes("main","main",{}))
+for _, node in ipairs(assert(graph.externalEndpoints())) do
+    assert(not graph.isOwnId(node.edgeId) and node.edgeId~="other:loop")
+    endpointCounts[node.edgeId]=(endpointCounts[node.edgeId] or 0)+1
+    assert(node.external and node.nodeId:sub(1,3)=="RR:")
+    if node.edgeId=="main" then
+        local source=mainNodes[node.nodeIndex]
+        assert(node.nodeIndex==1 or node.nodeIndex==#mainNodes)
+        assert(node.x==source.x and node.y==source.y and node.z==(source.z or 0))
+    end
+end
+assert(endpointCounts.main==2 and endpointCounts["other:line"]==2)
 local invalid = GD.copy(world)
 invalid.switches[1].legs.throat.edge = "other:line"
 local previous = RR.TrackGraph.overlay("main", "wayman")
@@ -107,6 +120,7 @@ assert(graph.register(positionOnly))
 local existingTile = RR.TrackGraph.overlay("main", "wayman").switches[1].place
 assert(existingTile.x == 1984 and #existingTile.sprites == 0)
 print("PASS: 3.0f public edge catalog, detached geometry and closed-edge identities")
+print("PASS: public RR/addon endpoint copies, original indices and Wayman/closed-edge exclusion")
 print("PASS: native switch.place preservation, validation and position-only Wayman interaction")
 print("PASS: beta registration/replacement/withdrawal, stable switch state and bidirectional routes")
 print("PASS: base and other overlays preserved; rejected registrations are atomic")

@@ -13,5 +13,9 @@
     "Wayman_SymmetricalCompactThreeWayTurnout": "Компактная симметричная трёхпутная стрелка",
     "Wayman_SymmetricalThreeWayTurnout": "Симметричная трёхпутная стрелка",
     "Wayman_TrackSegment": "Участок пути",
-    "Wayman_WyeTurnout": "Y-образная стрелка"
+    "Wayman_WyeTurnout": "Y-образная стрелка",
+    "Wayman_Left45DegCurve": "Левая кривая 45° (без шпал)",
+    "Wayman_Right45DegCurve": "Правая кривая 45° (без шпал)",
+    "Wayman_Curve90Deg": "Кривая 90° (без шпал)",
+    "Wayman_Right90DegTurnout": "Правый стрелочный перевод на 90°"
 }

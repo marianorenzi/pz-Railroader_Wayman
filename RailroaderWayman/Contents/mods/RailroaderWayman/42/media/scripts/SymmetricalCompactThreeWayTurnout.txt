@@ -14,6 +14,30 @@ module RailroaderWayman
             isThumpable = false,
             OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
 
+            face N
+            {
+                layer
+                {
+                    row = false railroader_wayman_switches_15_33 railroader_wayman_switches_15_34 false railroader_wayman_switches_15_35 false false false,
+                    row = railroader_wayman_switches_15_36 railroader_wayman_switches_15_37 railroader_wayman_switches_15_38 false railroader_wayman_switches_15_39 railroader_wayman_switches_15_40 railroader_wayman_switches_15_41 false,
+                    row = railroader_wayman_switches_15_42 railroader_wayman_switches_15_43 railroader_wayman_switches_15_44 railroader_wayman_switches_15_45 railroader_wayman_switches_15_46 railroader_wayman_switches_15_47 railroader_wayman_switches_15_48 false,
+                    row = railroader_wayman_switches_15_49 railroader_wayman_switches_15_50 railroader_wayman_switches_15_51 railroader_wayman_switches_15_52 railroader_wayman_switches_15_53 railroader_wayman_switches_15_54 railroader_wayman_switches_15_55 false,
+                    row = railroader_wayman_switches_15_56 railroader_wayman_switches_15_57 railroader_wayman_switches_15_58 railroader_wayman_switches_15_59 railroader_wayman_switches_15_60 railroader_wayman_switches_15_61 railroader_wayman_switches_15_62 false,
+                }
+            }
+
+            face S
+            {
+                layer
+                {
+                    row = railroader_wayman_switches_15_63 railroader_wayman_switches_16_0 railroader_wayman_switches_16_1 railroader_wayman_switches_16_2 railroader_wayman_switches_16_3 railroader_wayman_switches_16_4 railroader_wayman_switches_16_5 railroader_wayman_switches_16_6,
+                    row = railroader_wayman_switches_16_7 railroader_wayman_switches_16_8 railroader_wayman_switches_16_9 railroader_wayman_switches_16_10 railroader_wayman_switches_16_11 railroader_wayman_switches_16_12 railroader_wayman_switches_16_13 railroader_wayman_switches_16_14,
+                    row = railroader_wayman_switches_16_15 railroader_wayman_switches_16_16 railroader_wayman_switches_16_17 railroader_wayman_switches_16_18 railroader_wayman_switches_16_19 railroader_wayman_switches_16_20 railroader_wayman_switches_16_21 railroader_wayman_switches_16_22,
+                    row = railroader_wayman_switches_16_23 railroader_wayman_switches_16_24 railroader_wayman_switches_16_25 railroader_wayman_switches_16_26 railroader_wayman_switches_16_27 railroader_wayman_switches_16_28 railroader_wayman_switches_16_29 railroader_wayman_switches_16_30,
+                    row = false false railroader_wayman_switches_16_31 railroader_wayman_switches_16_32 railroader_wayman_switches_16_33 railroader_wayman_switches_16_34 railroader_wayman_switches_16_35 false,
+                }
+            }
+
             face W
             {
                 layer

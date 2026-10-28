@@ -1,0 +1,78 @@
+module RailroaderWayman
+{
+    entity Right45DegCurve
+    {
+        component UiConfig
+        {
+            xuiSkin = default,
+            entityStyle = ES_WaymanRight45DegCurve,
+            uiEnabled = false,
+        }
+
+        component SpriteConfig
+        {
+            isThumpable = false,
+            OnCreate = RailroaderWaymanEntityRuntime.OnCreate,
+
+            face N
+            {
+                layer
+                {
+                    row = false false railroader_wayman_curves_01_48 railroader_wayman_curves_01_49 false railroader_wayman_curves_01_50,
+                    row = false railroader_wayman_curves_01_51 railroader_wayman_curves_01_52 railroader_wayman_curves_01_53 railroader_wayman_curves_01_54 railroader_wayman_curves_01_55,
+                    row = railroader_wayman_curves_01_56 railroader_wayman_curves_01_57 railroader_wayman_curves_01_58 false railroader_wayman_curves_01_59 railroader_wayman_curves_01_60,
+                }
+            }
+
+            face E
+            {
+                layer
+                {
+                    row = railroader_wayman_curves_03_24 railroader_wayman_curves_03_25 false railroader_wayman_curves_03_26 railroader_wayman_curves_03_27 false,
+                    row = false railroader_wayman_curves_01_61 railroader_wayman_curves_01_62 false railroader_wayman_curves_01_63 false,
+                    row = false false railroader_wayman_curves_02_0 railroader_wayman_curves_02_1 railroader_wayman_curves_02_2 false,
+                    row = false false false railroader_wayman_curves_03_28 railroader_wayman_curves_02_3 false,
+                }
+            }
+
+            face S
+            {
+                layer
+                {
+                    row = railroader_wayman_curves_02_4 railroader_wayman_curves_02_5 false railroader_wayman_curves_02_7 railroader_wayman_curves_02_8 false,
+                    row = railroader_wayman_curves_02_10 false railroader_wayman_curves_02_12 railroader_wayman_curves_02_13 false false,
+                    row = railroader_wayman_curves_02_15 false railroader_wayman_curves_02_16 false false false,
+                }
+            }
+
+            face W
+            {
+                layer
+                {
+                    row = railroader_wayman_curves_02_21 railroader_wayman_curves_02_22 false false false false,
+                    row = false false railroader_wayman_curves_02_23 railroader_wayman_curves_02_24 false false,
+                    row = railroader_wayman_curves_02_25 railroader_wayman_curves_02_26 false railroader_wayman_curves_02_27 railroader_wayman_curves_02_28 false,
+                    row = false railroader_wayman_curves_02_29 railroader_wayman_curves_02_30 false railroader_wayman_curves_02_31 railroader_wayman_curves_02_32,
+                }
+            }
+
+        }
+
+        component CraftRecipe
+        {
+            timedAction = BuildWoodenStructureSmall,
+            time = 300,
+            SkillRequired = Woodwork:6;MetalWelding:4,
+            xpAward = Woodwork:20;MetalWelding:10,
+            category = Railroad,
+            Tags = Carpentry;CanBeDoneFromFloor,
+            inputs
+            {
+                item 1 tags[base:hammer] mode:keep flags[Prop1;MayDegradeLight],
+                item 4 [Base.Plank],
+                item 2 [Base.RailroadSpike],
+                item 1 [Base.MetalBar],
+            }
+        }
+    }
+}

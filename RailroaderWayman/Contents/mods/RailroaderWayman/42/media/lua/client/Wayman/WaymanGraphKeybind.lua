@@ -13,8 +13,7 @@ table.insert(keyBinding, { value = BINDING_ID, key = Keyboard.KEY_PERIOD })
 local function onKeyPressed(key)
     if key ~= getCore():getKey(BINDING_ID) then return end
     if ISChat and ISChat.focused then return end
-    if Editor.instance and Editor.instance.newEdgeId
-        and Editor.instance.newEdgeId:isFocused() then return end
+    if Editor.isTyping() then return end
     if Editor.instance and Editor.instance:getIsVisible() then
         Editor.instance:close()
         return

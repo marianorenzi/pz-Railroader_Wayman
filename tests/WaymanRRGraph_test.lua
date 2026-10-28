@@ -94,6 +94,27 @@ assert(byId.main.label == "rr:main" and byId["wayman:main"].label == "wayman:mai
 assert(byId["other:line"].label == "other:line" and not byId["wayman:old"])
 assert(byId["other:loop"] and not byId["other:loop#a"])
 assert(byId.main.external and not byId["wayman:main"].external)
+local publicNodes={
+    main={{x=1,y=1,name="station",open=false},{x=2,y=2},{x=3,y=3,name=""}},
+    yard={{x=4,y=4,z=1}},
+    ["other:line"]={{x=5,y=5},{x=6,y=6},{x=7,y=7,name="addon"}},
+}
+RR.API.edgeNodes=function(id,net,out)
+    assert(net=="main" and id~="wayman:old" and id~="other:loop")
+    return publicNodes[id]
+end
+local endpoints=assert(graph.externalEndpoints())
+assert(#endpoints==5)
+assert(endpoints[1].nodeId=="RR:station" and endpoints[1].nodeIndex==1)
+assert(endpoints[2].nodeId=="RR:3" and endpoints[2].nodeIndex==3)
+assert(endpoints[3].edgeId=="other:line" and endpoints[4].nodeId=="RR:addon")
+assert(endpoints[5].edgeId=="yard" and endpoints[5].z==1)
+publicNodes.main[1].x=999
+assert(endpoints[1].x==1,"cached endpoints retained RR's reused row tables")
+RR.API.edgeNodes=function() return nil,"unknown" end
+assert(#assert(graph.externalEndpoints())==0)
+RR.API.edgeNodes=nil
+assert(#assert(graph.externalEndpoints())==0)
 assert(graph.register(world))
 local previous = active
 reject = true

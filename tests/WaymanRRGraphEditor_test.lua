@@ -76,3 +76,73 @@ assert(exported and exported:find("[RailroaderWayman] WORLD_DATA_JSON ",1,true) 
 print("PASS: turnout labels include every prefix and preserve real external IDs")
 print("PASS: native and local main stay distinct through selection and deletion")
 print("PASS: explicit graph export remains available outside debug mode")
+
+-- Presentation is derived from actual visibility, without changing saved
+-- display preferences or switching the closed editor back to confirmed data.
+local Controller = RailroaderWaymanGraphEditor
+local options = {showAllEdges=true, showAvailableNodes=true, showSelectedEdge=true}
+RailroaderWaymanGraphDisplay.getOptions = function() return options end
+local confirmed = {edges={}}
+local state = Controller.getOverlayState(confirmed)
+assert(not state.editorOpen and state.data == confirmed)
+assert(state.showAllEdges and not state.showAvailableNodes and not state.showSelectedEdge)
+local visible, order = true, {}
+ISComboBox = {}
+editor.getIsVisible = function() return visible end
+editor.setVisible = function(_, value) visible = value end
+editor.bringToTop = function() order[#order + 1] = "editor" end
+Controller.instance = editor
+Controller.selectedEdgeBlockId, Controller.selectedAvailableBlockId = "block", "available"
+state = Controller.getOverlayState(confirmed)
+assert(state.editorOpen and state.showAvailableNodes and state.showSelectedEdge)
+assert(state.selectedEdgeId == "main" and state.selectedEdgeBlockId == "block"
+    and state.selectedAvailableBlockId == "available")
+Keyboard = {KEY_ESCAPE=1}
+for _, close in ipairs({windowClass.close, windowClass.onCancel,
+    function(window) window:onKeyRelease(Keyboard.KEY_ESCAPE) end}) do
+    close(editor)
+    state = Controller.getOverlayState(confirmed)
+    assert(not state.editorOpen and state.data == editor.draft)
+    assert(not state.showAvailableNodes and not state.showSelectedEdge and state.showAllEdges)
+    assert(not state.selectedEdgeId and not state.selectedEdgeBlockId and not state.selectedAvailableBlockId)
+    assert(options.showAvailableNodes and options.showSelectedEdge, "closing erased saved toggles")
+    Controller.open(confirmed)
+    state = Controller.getOverlayState(confirmed)
+    assert(state.editorOpen and state.showAvailableNodes and state.showSelectedEdge)
+    assert(state.selectedAvailableBlockId == "available" and state.data == editor.draft)
+end
+options.showAvailableNodes, options.showSelectedEdge = false, false
+editor:close(); Controller.open(confirmed)
+state = Controller.getOverlayState(confirmed)
+assert(not state.showAvailableNodes and not state.showSelectedEdge, "reopening reset disabled toggles")
+
+-- Existing vanilla popups stay above their parent; no focus setter is called.
+editor.conflictModal = {getIsVisible=function() return true end,
+    bringToTop=function() order[#order+1]="modal" end}
+ISComboBox = {SharedPopup={parentCombo={expanded=true},getIsVisible=function() return true end,
+    bringToTop=function() order[#order+1]="combo" end}}
+order = {}
+Controller.bringToTop()
+assert(table.concat(order, ",") == "editor,modal,combo")
+ISComboBox.SharedPopup.parentCombo.expanded = false
+order = {}; Controller.bringToTop()
+assert(table.concat(order, ",") == "editor,modal", "closed shared popup was raised")
+editor:close(); order = {}; Controller.bringToTop()
+assert(#order == 0, "hidden editor was raised")
+
+-- Inversion acts on a whole multi-node block, never on canonical geometry.
+local multi = {blockId="multi", nodes={{x=1,y=2},{x=3,y=4}}}
+local single = {blockId="single", nodes={{x=5,y=6}}}
+local current, dirtyCount = multi, 0
+editor.getSelectedEdgeBlock = function() return current, 1 end
+editor.setDirty = function() dirtyCount=dirtyCount+1 end
+editor:onInvert()
+assert(multi.invertNodes and dirtyCount == 1)
+assert(multi.nodes[1].x == 1 and multi.nodes[2].x == 3)
+editor:onInvert()
+assert(not multi.invertNodes and dirtyCount == 2)
+current = single; editor:onInvert()
+assert(not single.invertNodes and dirtyCount == 2, "single-node inversion changed draft")
+print("PASS: hidden/absent editor masks helpers and selections, and reopening preserves preferences/draft")
+print("PASS: raising the editor preserves popup order without touching keyboard focus")
+print("PASS: inversion is reversible, preserves node geometry and ignores one-node blocks")

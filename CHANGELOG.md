@@ -1,9 +1,19 @@
 # Changelog
 
+## 1.1.0
+
+- Added buildable left/right 45° curves and a 90° curve without sleepers in all four facings, with construction recipes, icons, English/Spanish/Russian names and material recovery.
+- Added a right-hand 90° turnout and completed all four facings for diagonal crossing edges, diagonal 45° turnouts, left-hand 90° turnouts, Wye turnouts and both three-way turnout designs.
+- Corrected railway piece textures, tile layouts, icons and route-node geometry, including the new curves and existing turns and turnouts.
+- Added construction guides to help align curves and turnouts, with connection directions, compatibility feedback, distances and target labels at each guide's visible end. Guides detect Wayman nodes and route endpoints from Railroader and other mods, with white highlights for ghost nodes and detected targets, including targets beyond the visible guide.
+- Added New and Rename ID popups with validation and keyboard controls. Published-route renames are applied by the server and synchronized to client snapshots and drafts while preserving unfinished edits; missing rename history and local ID collisions require explicit review.
+- Added a Normal/Inverted column to route block rows and numbered selected-route nodes by their position in the complete traversal, including start/end and coincident nodes, with lines connecting labels to their markers.
+- Hid map editing aids, node tooltips and node selection when the Graph Editor is closed, while retaining route lines through Show all edges. Opening the map now keeps an already open editor and its popups in front.
+- Added debug JSON logging for saved entity geometry, including effective defaults, origin, facing and component identity.
+
 ## 1.0.0
 
 - Added support for Railroader 3.0 through its public API, connecting Wayman routes to the existing railway in singleplayer and multiplayer.
-- Added construction guides with connection directions, compatibility feedback and distances to help align curves and turnouts.
 - Corrected the appearance and alignment of railway pieces and adjusted their route nodes.
 - Rebalanced construction materials and skill requirements, including both three-way turnouts.
 - Added railroad spike forging and casting recipes, plus material recovery through the game's Disassemble action.
